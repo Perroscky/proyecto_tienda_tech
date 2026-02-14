@@ -16,32 +16,21 @@ Sistema de e-commerce para venta de productos de tecnología con catálogo diná
 
 ## 📦 Instalación
 
-1. Clonar el repositorio:
-```bash
-git clone https://github.com/TU-USUARIO/proyecto_tienda_tech.git
-cd proyecto_tienda_tech
-```
-
-2. Crear entorno virtual:
-```bash
+1. Crear entorno virtual:
 python -m venv venv
-```
 
-3. Activar entorno virtual:
-- Windows: `venv\Scripts\activate`
-- Mac/Linux: `source venv/bin/activate`
+2. Activar entorno virtual:
+- Windows: venv\Scripts\activate`
 
-4. Instalar dependencias:
-```bash
+3. Instalar dependencias:
+
 pip install -r requirements.txt
-```
 
-5. Ejecutar la aplicación:
-```bash
+4. Ejecutar la aplicación:
+
 python app.py
-```
 
-6. Abrir en navegador: `http://127.0.0.1:5000`
+5. Abrir en navegador: `http://127.0.0.1:5000`
 
 ## 🌐 Rutas Disponibles
 
@@ -51,6 +40,6 @@ python app.py
 - `/categoria/<tipo>` - Productos por categoría
 - `/contacto` - Información de contacto
 
-## 👨‍💻 Autor
+## Elaborado
 
-Luis Samaniego - Proyecto Flask
+Alumno: Luis Samaniego - Proyecto Flask
