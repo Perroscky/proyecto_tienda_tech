@@ -20,7 +20,7 @@ Sistema de e-commerce para venta de productos de tecnología con catálogo diná
    python -m venv venv
 
 2. Activar entorno virtual:
-   Windows: venv\Scripts\activate`
+   Windows: venv\Scripts\activate
 
 3. Instalar dependencias:
 
