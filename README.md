@@ -16,19 +16,13 @@ Sistema de e-commerce para venta de productos de tecnología con catálogo diná
 
 ## 📦 Instalación
 
-1. Crear entorno virtual:
-   python -m venv venv
+1. Crear entorno virtual: python -m venv venv
 
-2. Activar entorno virtual:
-   Windows: venv\Scripts\activate
+2. Activar entorno virtual: venv\Scripts\activate
 
-3. Instalar dependencias:
+3. Instalar dependencias: pip install -r requirements.txt
 
-   pip install -r requirements.txt
-
-4. Ejecutar la aplicación:
-
-   python app.py
+4. Ejecutar la aplicación: python app.py
 
 5. Abrir en navegador: `http://127.0.0.1:5000`
 
