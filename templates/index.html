@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tienda Tech Online</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🖥️ Tienda Tech Online</h1>
+            <p class="subtitle">Los mejores productos de tecnología al mejor precio</p>
+        </header>
+        
+        <nav class="navbar">
+            <a href="/">Inicio</a>
+            <a href="/categoria/computadoras">Computadoras</a>
+            <a href="/categoria/perifericos">Periféricos</a>
+            <a href="/categoria/audio">Audio</a>
+            <a href="/contacto">Contacto</a>
+        </nav>
+        
+        <main>
+            <section class="welcome">
+                <h2>🎯 Catálogo de Productos</h2>
+                <p>Descubre nuestra selección de tecnología premium</p>
+            </section>
+            
+            <section class="productos">
+                <div class="producto-grid">
+                    {% for key, prod in productos.items() %}
+                    <div class="producto-card">
+                        <div class="producto-icon">
+                            {% if 'laptop' in key %}🖥️
+                            {% elif 'mouse' in key %}🖱️
+                            {% elif 'teclado' in key %}⌨️
+                            {% elif 'monitor' in key %}🖥️
+                            {% elif 'audifonos' in key %}🎧
+                            {% elif 'webcam' in key %}📹
+                            {% else %}📦
+                            {% endif %}
+                        </div>
+                        <h3>{{ prod['nombre'] }}</h3>
+                        <p class="precio">{{ prod['precio'] }}</p>
+                        <p class="stock">{{ prod['stock'] }}</p>
+                        <a href="/producto/{{ key }}" class="btn-ver">Ver Detalles</a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+            
+            <section class="promociones">
+                <h2>🔥 Ofertas Especiales</h2>
+                <p>Aprovecha nuestras promociones exclusivas</p>
+                <div class="promo-banner">
+                    <p>✨ Envío gratis en compras mayores a $100</p>
+                    <p>💳 12 meses sin intereses</p>
+                    <p>🎁 Garantía extendida disponible</p>
+                </div>
+            </section>
+        </main>
+        
+        <footer>
+            <p>&copy; 2026 Tienda Tech Online. Todos los derechos reservados.</p>
+            <p>Santo Domingo, Ecuador | <a href="/contacto">Contáctanos</a></p>
+        </footer>
+    </div>
+</body>
+</html>
