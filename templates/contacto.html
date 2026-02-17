@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Contacto | Tienda Tech{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 15px;">
+    <h1 style="color: #667eea;">📞 Contacto</h1>
+    <div style="margin: 20px 0; line-height: 2;">
+        <p><strong>Email:</strong> ventas@tiendatech.com</p>
+        <p><strong>Teléfono:</strong> +593 99 621 9888</p>
+        <p><strong>WhatsApp:</strong> +593 99 621 9688</p>
+        <p><strong>Horario:</strong> Lun-Sab 09:00 AM - 18:00 PM</p>
+    </div>
+    <a href="{{ url_for('inicio') }}" style="display: inline-block; margin-top: 20px; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px;">← Volver a la tienda</a>
+</div>
+{% endblock %}

@@ -33,6 +33,29 @@ Sistema de e-commerce para venta de productos de tecnología con catálogo diná
   - Ejemplos: `/producto/laptop`, `/producto/mouse`, `/producto/teclado`
 - `/categoria/<tipo>` - Productos por categoría
 - `/contacto` - Información de contacto
+- `/about` - Información sobre la tienda
+
+## 📝 Actualizaciones del Proyecto
+
+### Semana 9 (Proyecto Inicial)
+- Creación de la aplicación Flask
+- Implementación de rutas principales
+- Base de datos simulada de productos
+- Diseño CSS personalizado
+- Catálogo de 6 productos tecnológicos
+
+### Semana 10 (Plantillas con Herencia)
+- Implementación de plantillas dinámicas con Jinja2
+- Creación de plantilla base (base.html) con header, navbar y footer
+- Separación de estructura y contenido usando {% block content %}
+- Nuevas páginas creadas:
+  - about.html - Página "Acerca de" con información de la empresa
+  - producto.html - Vista detallada de productos
+  - categoria.html - Filtrado por categoría
+  - contacto.html - Información de contacto
+  - Páginas de error 404 personalizadas
+- Código más limpio y mantenible
+- Todas las rutas ahora usan render_template()
 
 ## Elaborado
 

@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Categoría no encontrada{% endblock %}
+
+{% block content %}
+<div style="background: white; padding: 40px; border-radius: 15px; max-width: 500px; margin: 100px auto; text-align: center;">
+    <h1 style="color: #e74c3c;">❌ Categoría no encontrada</h1>
+    <p>La categoría "{{ tipo }}" no existe en nuestro catálogo.</p>
+    <a href="{{ url_for('inicio') }}" style="display: inline-block; margin-top: 20px; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px;">Ver todas las categorías</a>
+</div>
+{% endblock %}

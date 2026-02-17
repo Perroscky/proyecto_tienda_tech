@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Acerca de Nosotros | Tienda Tech{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 15px;">
+    <h1 style="color: #667eea;">ℹ️ Acerca de Tienda Tech</h1>
+    
+    <div style="margin: 30px 0;">
+        <h2 style="color: #764ba2;">Nuestra Historia</h2>
+        <p style="line-height: 1.6; color: #555;">Fundada en 2020, Tienda Tech Online se ha convertido en el destino favorito para los amantes de la tecnología en Ecuador. Comenzamos como una pequeña tienda en línea y hoy somos referentes en venta de productos tecnológicos.</p>
+    </div>
+    
+    <div style="margin: 30px 0;">
+        <h2 style="color: #764ba2;">Misión</h2>
+        <p style="line-height: 1.6; color: #555;">Ofrecer productos tecnológicos de alta calidad a precios competitivos, brindando una experiencia de compra excepcional y asesoramiento personalizado a nuestros clientes.</p>
+    </div>
+    
+    <div style="margin: 30px 0;">
+        <h2 style="color: #764ba2;">Visión</h2>
+        <p style="line-height: 1.6; color: #555;">Ser la tienda tecnológica líder en Ecuador, reconocida por nuestra variedad de productos, servicio al cliente y compromiso con la innovación.</p>
+    </div>
+    
+    <div style="margin: 30px 0;">
+        <h2 style="color: #764ba2;">Valores</h2>
+        <ul style="line-height: 1.8; color: #555;">
+            <li>🔹 Calidad en cada producto</li>
+            <li>🔹 Atención personalizada</li>
+            <li>🔹 Innovación constante</li>
+            <li>🔹 Compromiso con el cliente</li>
+        </ul>
+    </div>
+    
+    <a href="{{ url_for('inicio') }}" style="display: inline-block; margin-top: 20px; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px;">← Volver a la tienda</a>
+</div>
+{% endblock %}
