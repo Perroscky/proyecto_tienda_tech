@@ -1,8 +1,12 @@
+# app.py
+
 from flask import Flask, render_template
+from models.inventario import Inventario
+from database.db_manager import DatabaseManager
 
 app = Flask(__name__)
 
-# Base de datos simulada de productos (sin cambios)
+# Base de datos simulada de productos (se mantiene para migración)
 productos_db = {
     'laptop': {
         'nombre': 'Laptop Dell XPS 15',
@@ -42,30 +46,81 @@ productos_db = {
     }
 }
 
+# Inicializar el inventario (se carga automáticamente desde la BD)
+inventario = Inventario()
+
+# Opcional: Migrar datos iniciales si la BD está vacía
+def verificar_y_migrar_datos():
+    """Verifica si hay datos en la BD y migra los iniciales si es necesario"""
+    db = DatabaseManager("proyecto_tienda_tech.db")
+    productos = db.obtener_todos_productos()
+    
+    if not productos:
+        print("🔄 Base de datos vacía. Migrando productos iniciales...")
+        db.migrar_productos_iniciales()
+        # Recargar inventario después de la migración
+        global inventario
+        inventario = Inventario()
+        print("✅ Migración completada. Productos disponibles en la tienda.")
+    else:
+        print(f"✅ Base de datos con {len(productos)} productos cargados.")
+
+# Ejecutar verificación al iniciar
+verificar_y_migrar_datos()
+
 # Ruta principal
 @app.route('/')
 def inicio():
-    return render_template('index.html', productos=productos_db)
+    # Obtener todos los productos del inventario
+    productos = inventario.obtener_todos()
+    
+    # Convertir a formato para la plantilla
+    productos_template = {}
+    for prod in productos:
+        # Usar el nombre como clave para mantener compatibilidad con plantillas existentes
+        key = prod.nombre.lower().replace(' ', '_').replace('"', '').replace("'", '')
+        productos_template[key] = {
+            'nombre': prod.nombre,
+            'precio': f"${prod.precio:.2f}",
+            'stock': 'Disponible' if prod.cantidad > 5 else 'Stock Limitado' if prod.cantidad > 0 else 'Agotado',
+            'descripcion': prod.descripcion
+        }
+    
+    return render_template('index.html', productos=productos_template)
 
 # Ruta dinámica para productos
 @app.route('/producto/<nombre>')
 def producto(nombre):
-    nombre_lower = nombre.lower()
+    # Buscar el producto por nombre (búsqueda aproximada)
+    nombre_lower = nombre.lower().replace('_', ' ')
+    productos_encontrados = inventario.buscar_productos(nombre_lower)
     
-    if nombre_lower in productos_db:
-        prod = productos_db[nombre_lower]
-        return render_template('producto.html', prod=prod)
+    if productos_encontrados:
+        prod = productos_encontrados[0]  # Tomar el primero encontrado
+        prod_dict = {
+            'nombre': prod.nombre,
+            'precio': f"${prod.precio:.2f}",
+            'stock': 'Disponible' if prod.cantidad > 5 else 'Stock Limitado' if prod.cantidad > 0 else 'Agotado',
+            'descripcion': prod.descripcion,
+            'cantidad': prod.cantidad,
+            'categoria': prod.categoria
+        }
+        return render_template('producto.html', prod=prod_dict)
     else:
         return render_template('404_producto.html', nombre=nombre), 404
 
 # Ruta para categorías
 @app.route('/categoria/<tipo>')
 def categoria(tipo):
-    categorias_validas = ['computadoras', 'perifericos', 'audio']
+    categorias_validas = Inventario.CATEGORIAS_VALIDAS
     tipo_lower = tipo.lower()
     
     if tipo_lower in categorias_validas:
-        return render_template('categoria.html', tipo=tipo_lower)
+        # Obtener productos de esa categoría
+        productos_categoria = inventario.obtener_por_categoria(tipo_lower)
+        return render_template('categoria.html', tipo=tipo_lower, 
+                             productos=productos_categoria, 
+                             hay_productos=len(productos_categoria) > 0)
     else:
         return render_template('404_categoria.html', tipo=tipo), 404
 
@@ -74,10 +129,11 @@ def categoria(tipo):
 def contacto():
     return render_template('contacto.html')
 
-# Ruta acerca de (nueva para la tarea)
+# Ruta acerca de
 @app.route('/about')
 def about():
     return render_template('about.html')
 
 if __name__ == '__main__':
+    print("🚀 Iniciando proyecto_tienda_tech...")
     app.run(debug=True)

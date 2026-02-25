@@ -1,11 +1,27 @@
 {% extends "base.html" %}
 
-{% block title %}Categoría: {{ tipo.capitalize() }} | Tienda Tech{% endblock %}
+{% block title %}Categoría: {{ tipo.capitalize() }} | proyecto_tienda_tech{% endblock %}
 
 {% block content %}
 <div style="max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 15px;">
     <h1 style="color: #667eea;">📦 Categoría: {{ tipo.capitalize() }}</h1>
-    <p>Explora nuestros productos de {{ tipo }}</p>
-    <a href="{{ url_for('inicio') }}" style="display: inline-block; margin-top: 20px; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px;">← Volver</a>
+    
+    {% if hay_productos %}
+        <p>Explora nuestros productos tecnológicos de {{ tipo }}</p>
+        <div style="margin: 20px 0;">
+            {% for producto in productos %}
+                <div style="border: 1px solid #eee; padding: 15px; margin: 10px 0; border-radius: 10px;">
+                    <h3 style="color: #333;">{{ producto.nombre }}</h3>
+                    <p>💰 Precio: ${{ "%.2f"|format(producto.precio) }}</p>
+                    <p>📦 Stock: {{ producto.cantidad }} unidades</p>
+                    <p>🏷️ ID: {{ producto.id }}</p>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No hay productos disponibles en esta categoría actualmente.</p>
+    {% endif %}
+    
+    <a href="{{ url_for('inicio') }}" style="display: inline-block; margin-top: 20px; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px;">← Volver a la tienda</a>
 </div>
 {% endblock %}
