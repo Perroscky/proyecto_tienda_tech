@@ -1,81 +1,45 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tienda Tech Online</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <div class="container">
-        <header>
-            <h1>🖥️ Tienda Tech Online</h1>
-            <p class="subtitle">Los mejores productos de tecnología al mejor precio</p>
-        </header>
-        
-        <nav class="navbar">
-            <a href="/">Inicio</a>
-            <a href="/categoria/computadoras">Computadoras</a>
-            <a href="/categoria/perifericos">Periféricos</a>
-            <a href="/categoria/audio">Audio</a>
-            <a href="/contacto">Contacto</a>
-            <a href="/about">Acerca de</a>
-            {% if session.usuario_id %}
-                <a href="/logout">🚪 Cerrar Sesión</a>
-            {% else %}
-                <a href="/login">🔐 Iniciar Sesión</a>
-                <a href="/registro">📝 Registrarse</a>
-            {% endif %}
-            <a href="/carrito">🛒 Carrito</a>
-        </nav>
-        
-        <main>
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div style="padding: 10px; margin: 10px 0; border-radius: 5px; background-color: {% if category == 'error' %}#f8d7da{% else %}#d4edda{% endif %};">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
+{% extends "base.html" %}
+
+{% block title %}Inicio | Tienda Tech{% endblock %}
+
+{% block content %}
+<section class="welcome">
+    <h2>🎯 Catálogo de Productos</h2>
+    <p>Descubre nuestra selección de tecnología premium</p>
+</section>
+
+<section class="productos">
+    <div class="producto-grid">
+        {% for key, prod in productos.items() %}
+        <div class="producto-card">
+            <div class="producto-icon">
+                {% if 'laptop' in key %}🖥️
+                {% elif 'mouse' in key %}🖱️
+                {% elif 'teclado' in key %}⌨️
+                {% elif 'monitor' in key %}🖥️
+                {% elif 'audifonos' in key %}🎧
+                {% elif 'webcam' in key %}📹
+                {% else %}📦
                 {% endif %}
-            {% endwith %}
-            
-            <section class="welcome">
-                <h2>🎯 Catálogo de Productos</h2>
-                <p>Descubre nuestra selección de tecnología premium</p>
-            </section>
-            
-            <section class="productos">
-                <div class="producto-grid">
-                    {% for key, prod in productos.items() %}
-                    <div class="producto-card">
-                        <div class="producto-icon">📦</div>
-                        <h3>{{ prod['nombre'] }}</h3>
-                        <p class="precio">{{ prod['precio'] }}</p>
-                        <p class="stock">{{ prod['stock'] }}</p>
-                        <div style="display: flex; gap: 5px; justify-content: center;">
-                            <a href="/producto/{{ key }}" class="btn-ver">Ver Detalles</a>
-                            <a href="/agregar_al_carrito/{{ prod.id }}" class="btn-ver" style="background: #27ae60;">🛒</a>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </section>
-            
-            <section class="promociones">
-                <h2>🔥 Ofertas Especiales</h2>
-                <div class="promo-banner">
-                    <p>✨ Envío gratis en compras mayores a $100</p>
-                    <p>💳 12 meses sin intereses</p>
-                    <p>🎁 Garantía extendida disponible</p>
-                </div>
-            </section>
-        </main>
-        
-        <footer>
-            <p>&copy; 2026 Tienda Tech Online. Todos los derechos reservados.</p>
-            <p>Santo Domingo, Ecuador | <a href="/contacto">Contáctanos</a></p>
-        </footer>
+            </div>
+            <h3>{{ prod.nombre }}</h3>
+            <p class="precio">{{ prod.precio }}</p>
+            <p class="stock">{{ prod.stock }}</p>
+            <div class="producto-acciones">
+                <a href="{{ url_for('producto', nombre=key) }}" class="btn-ver">Ver Detalles</a>
+                <a href="{{ url_for('agregar_al_carrito', producto_id=prod.id) }}" class="btn-ver btn-carrito">🛒 Agregar</a>
+            </div>
+        </div>
+        {% endfor %}
     </div>
-</body>
-</html>
+</section>
+
+<section class="promociones">
+    <h2>🔥 Ofertas Especiales</h2>
+    <div class="promo-banner">
+        <p>✨ Envío gratis en compras mayores a $100</p>
+        <p>💳 12 meses sin intereses</p>
+        <p>🎁 Garantía extendida disponible</p>
+    </div>
+</section>
+{% endblock %}

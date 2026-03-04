@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Tienda Tech Online{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    {% block extra_styles %}{% endblock %}
 </head>
 <body>
     <div class="container">
@@ -22,7 +21,6 @@
             <a href="{{ url_for('contacto') }}">Contacto</a>
             <a href="{{ url_for('about') }}">Acerca de</a>
             
-            <!-- Menú de usuario y carrito -->
             {% if session.usuario_id %}
                 <a href="{{ url_for('logout') }}">🚪 Cerrar Sesión ({{ session.usuario_nombre }})</a>
             {% else %}
@@ -31,29 +29,24 @@
             {% endif %}
             
             <a href="{{ url_for('ver_carrito') }}">🛒 Carrito 
-                {% if session.carrito and session.carrito.items %}
-                    ({{ session.carrito.items|length }})
+                {% if session.carrito and session.carrito.cantidad_items %}
+                    ({{ session.carrito.cantidad_items }})
                 {% endif %}
             </a>
         </nav>
         
         <main>
-            <!-- Mensajes flash -->
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     {% for category, message in messages %}
-                        <div style="padding: 10px; margin: 10px 0; border-radius: 5px; 
-                                  background-color: {% if category == 'error' %}#f8d7da{% else %}#d4edda{% endif %}; 
-                                  color: {% if category == 'error' %}#721c24{% else %}#155724{% endif %};">
+                        <div class="alert alert-{{ category }}">
                             {{ message }}
                         </div>
                     {% endfor %}
                 {% endif %}
             {% endwith %}
             
-            {% block content %}
-            <!-- Contenido específico de cada página -->
-            {% endblock %}
+            {% block content %}{% endblock %}
         </main>
         
         <footer>

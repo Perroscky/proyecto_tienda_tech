@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Registro | Tienda Tech{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <h1>📝 Crear Cuenta</h1>
+    
+    <form method="POST" action="{{ url_for('registro') }}">
+        <div class="form-group">
+            <label for="nombre">Nombre completo:</label>
+            <input type="text" id="nombre" name="nombre" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="password">Contraseña:</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="fecha_nacimiento">Fecha de nacimiento:</label>
+            <input type="date" id="fecha_nacimiento" name="fecha_nacimiento" required>
+            <small>Debes ser mayor de 18 años</small>
+        </div>
+        
+        <button type="submit" class="btn-primary">Registrarse</button>
+    </form>
+    
+    <p>¿Ya tienes cuenta? <a href="{{ url_for('login') }}">Inicia sesión</a></p>
+</div>
+{% endblock %} 

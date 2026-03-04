@@ -1,24 +1,22 @@
+# models/usuario.py
+
 import re
 from datetime import datetime, date
 
 class Usuario:
-    """Clase que representa un usuario de la tienda"""
-    
     usuarios_registrados = set()
     
     def __init__(self, id, nombre, email, password, fecha_nacimiento, proveedor="email"):
-        # Validar email único
         if email in Usuario.usuarios_registrados:
             raise ValueError(f"El email {email} ya está registrado")
         
-        # Validar edad (+18)
         if not self.es_mayor_de_edad(fecha_nacimiento):
             raise ValueError("Debes ser mayor de 18 años")
         
         self._id = id
         self._nombre = nombre
         self._email = email
-        self._password = f"enc_{password}_2026"  # Simulación
+        self._password = f"enc_{password}_2026"
         self._fecha_nacimiento = fecha_nacimiento
         self._proveedor = proveedor
         self._fecha_registro = datetime.now()
@@ -35,18 +33,6 @@ class Usuario:
     
     def verificar_password(self, password):
         return self._password == f"enc_{password}_2026"
-    
-    @property
-    def nombre(self):
-        return self._nombre
-    
-    @property
-    def email(self):
-        return self._email
-    
-    @property
-    def proveedor(self):
-        return self._proveedor
     
     @staticmethod
     def validar_email(email):

@@ -1,212 +1,309 @@
+# app.py
+
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from models.inventario import Inventario
 from models.usuario import Usuario
-from models.carrito import Carrito
 from database.db_manager import DatabaseManager
 
 app = Flask(__name__)
 app.secret_key = 'clave_secreta_proyecto_tienda_tech'
+app.config['SESSION_TYPE'] = 'filesystem'
 
-# Inicializar
+# Inicializar componentes
 inventario = Inventario()
 db = DatabaseManager()
 
-# Crear tablas adicionales
-db.crear_tabla_usuarios()
-db.crear_tabla_carrito()
+# Crear tablas necesarias
+try:
+    db.crear_tabla_usuarios()
+    db.crear_tabla_carrito()
+    print("✅ Tablas creadas/verificadas correctamente")
+except Exception as e:
+    print(f"⚠️ Error al crear tablas: {e}")
+
+# ----- RUTAS PÚBLICAS -----
+@app.route('/')
+def inicio():
+    """Página principal"""
+    productos = inventario.obtener_todos()
+    
+    productos_template = {}
+    for prod in productos:
+        key = prod.nombre.lower().replace(' ', '_').replace('"', '').replace("'", '')
+        productos_template[key] = {
+            'id': prod.id,
+            'nombre': prod.nombre,
+            'precio': f"${prod.precio:.2f}",
+            'stock': 'Disponible' if prod.cantidad > 5 else 'Stock Limitado' if prod.cantidad > 0 else 'Agotado',
+            'descripcion': prod.descripcion,
+            'cantidad_real': prod.cantidad
+        }
+    
+    return render_template('index.html', productos=productos_template)
+
+@app.route('/producto/<nombre>')
+def producto(nombre):
+    """Ver detalle de un producto"""
+    nombre_lower = nombre.lower().replace('_', ' ')
+    productos_encontrados = inventario.buscar_productos(nombre_lower)
+    
+    if productos_encontrados:
+        prod = productos_encontrados[0]
+        prod_dict = {
+            'id': prod.id,
+            'nombre': prod.nombre,
+            'precio': f"${prod.precio:.2f}",
+            'stock': 'Disponible' if prod.cantidad > 5 else 'Stock Limitado' if prod.cantidad > 0 else 'Agotado',
+            'descripcion': prod.descripcion,
+            'cantidad': prod.cantidad,
+            'categoria': prod.categoria
+        }
+        return render_template('producto.html', prod=prod_dict)
+    else:
+        return render_template('404_producto.html', nombre=nombre), 404
+
+@app.route('/categoria/<tipo>')
+def categoria(tipo):
+    """Ver productos por categoría"""
+    categorias_validas = Inventario.CATEGORIAS_VALIDAS
+    tipo_lower = tipo.lower()
+    
+    if tipo_lower in categorias_validas:
+        productos_categoria = inventario.obtener_por_categoria(tipo_lower)
+        return render_template('categoria.html', tipo=tipo_lower, 
+                             productos=productos_categoria, 
+                             hay_productos=len(productos_categoria) > 0)
+    else:
+        return render_template('404_categoria.html', tipo=tipo), 404
+
+@app.route('/contacto')
+def contacto():
+    """Página de contacto"""
+    return render_template('contacto.html')
+
+@app.route('/about')
+def about():
+    """Página acerca de"""
+    return render_template('about.html')
 
 # ----- RUTAS DE AUTENTICACIÓN -----
 @app.route('/registro', methods=['GET', 'POST'])
 def registro():
+    """Registro de nuevos usuarios"""
     if request.method == 'POST':
         try:
-            nombre = request.form['nombre']
-            email = request.form['email']
-            password = request.form['password']
-            fecha = request.form['fecha_nacimiento']
+            nombre = request.form.get('nombre', '').strip()
+            email = request.form.get('email', '').strip()
+            password = request.form.get('password', '').strip()
+            fecha = request.form.get('fecha_nacimiento', '').strip()
+            
+            # Validaciones
+            if not all([nombre, email, password, fecha]):
+                flash('Todos los campos son obligatorios', 'error')
+                return render_template('registro.html')
             
             if not Usuario.validar_email(email):
-                flash('Email no válido', 'error')
+                flash('El formato del email no es válido', 'error')
                 return render_template('registro.html')
             
+            # Verificar si el email ya existe
             if db.obtener_usuario_por_email(email):
-                flash('Email ya registrado', 'error')
+                flash('Este email ya está registrado', 'error')
                 return render_template('registro.html')
             
+            # Crear usuario (validación de edad dentro de la clase)
             usuario = Usuario(None, nombre, email, password, fecha)
             usuario_id = db.insertar_usuario(usuario)
             
-            session['usuario_id'] = usuario_id
-            session['usuario_nombre'] = nombre
-            
-            db.crear_carrito(usuario_id)
-            flash(f'¡Bienvenido {nombre}!', 'success')
-            return redirect(url_for('inicio'))
-            
+            if usuario_id:
+                session['usuario_id'] = usuario_id
+                session['usuario_nombre'] = nombre
+                session['usuario_email'] = email
+                
+                flash(f'¡Bienvenido {nombre}!', 'success')
+                return redirect(url_for('inicio'))
+            else:
+                flash('Error al crear el usuario', 'error')
+                
         except ValueError as e:
             flash(str(e), 'error')
+        except Exception as e:
+            flash(f'Error inesperado: {str(e)}', 'error')
     
     return render_template('registro.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    """Inicio de sesión"""
     if request.method == 'POST':
-        email = request.form['email']
-        password = request.form['password']
+        email = request.form.get('email', '').strip()
+        password = request.form.get('password', '').strip()
         
-        data = db.obtener_usuario_por_email(email)
+        if not email or not password:
+            flash('Email y contraseña son obligatorios', 'error')
+            return render_template('login.html')
         
-        if data:
-            usuario = Usuario(data[0], data[1], data[2], password, data[4])
-            if usuario.verificar_password(password):
-                session['usuario_id'] = data[0]
-                session['usuario_nombre'] = data[1]
-                flash(f'¡Bienvenido {data[1]}!', 'success')
+        usuario_data = db.obtener_usuario_por_email(email)
+        
+        if usuario_data:
+            # Verificar contraseña
+            if usuario_data[3] == f"enc_{password}_2026":
+                session['usuario_id'] = usuario_data[0]
+                session['usuario_nombre'] = usuario_data[1]
+                session['usuario_email'] = usuario_data[2]
+                
+                flash(f'¡Bienvenido {usuario_data[1]}!', 'success')
                 return redirect(url_for('inicio'))
         
         flash('Email o contraseña incorrectos', 'error')
     
     return render_template('login.html')
 
-@app.route('/registro/facebook')
-def registro_facebook():
-    flash('Registro con Facebook (simulado)', 'info')
-    return redirect(url_for('registro'))
-
-@app.route('/login/facebook')
-def login_facebook():
-    flash('Login con Facebook (simulado)', 'info')
-    return redirect(url_for('login'))
-
 @app.route('/logout')
 def logout():
+    """Cerrar sesión"""
     session.clear()
-    flash('Sesión cerrada', 'success')
+    flash('Sesión cerrada correctamente', 'success')
     return redirect(url_for('inicio'))
 
 # ----- RUTAS DEL CARRITO -----
 @app.route('/agregar_al_carrito/<int:producto_id>')
 def agregar_al_carrito(producto_id):
+    """Agrega un producto al carrito"""
     producto = inventario.obtener_producto_por_id(producto_id)
+    
     if not producto:
         flash('Producto no encontrado', 'error')
         return redirect(url_for('inicio'))
     
+    # Inicializar carrito si no existe
     if 'carrito' not in session:
-        session['carrito'] = Carrito(session.get('usuario_id')).to_dict()
+        session['carrito'] = {
+            'items': {},
+            'total': 0,
+            'cantidad_items': 0
+        }
     
-    carrito = Carrito(session.get('usuario_id'))
-    for item_id, item in session['carrito'].get('items', {}).items():
-        prod = inventario.obtener_producto_por_id(int(item['producto_id']))
-        if prod:
-            carrito.agregar_item(prod, item['cantidad'])
+    # Obtener carrito actual
+    carrito = session['carrito']
+    producto_id_str = str(producto_id)
     
-    carrito.agregar_item(producto)
-    session['carrito'] = carrito.to_dict()
+    # Agregar o actualizar producto
+    if producto_id_str in carrito['items']:
+        carrito['items'][producto_id_str]['cantidad'] += 1
+        carrito['items'][producto_id_str]['subtotal'] = carrito['items'][producto_id_str]['cantidad'] * producto.precio
+    else:
+        carrito['items'][producto_id_str] = {
+            'producto_id': producto_id,
+            'nombre': producto.nombre,
+            'precio': producto.precio,
+            'cantidad': 1,
+            'subtotal': producto.precio
+        }
+    
+    # Recalcular totales
+    total = 0
+    cantidad_total = 0
+    for item in carrito['items'].values():
+        total += item['subtotal']
+        cantidad_total += item['cantidad']
+    
+    carrito['total'] = total
+    carrito['cantidad_items'] = cantidad_total
+    
+    # Guardar en sesión
+    session['carrito'] = carrito
+    session.modified = True
     
     flash(f'{producto.nombre} agregado al carrito', 'success')
     return redirect(url_for('ver_carrito'))
 
 @app.route('/carrito')
 def ver_carrito():
+    """Ver el contenido del carrito"""
     if 'carrito' not in session:
-        session['carrito'] = Carrito(session.get('usuario_id')).to_dict()
-    return render_template('carrito.html')
+        session['carrito'] = {
+            'items': {},
+            'total': 0,
+            'cantidad_items': 0
+        }
+    return render_template('carrito.html', carrito=session['carrito'])
 
 @app.route('/actualizar_carrito/<int:producto_id>', methods=['POST'])
 def actualizar_carrito(producto_id):
-    cantidad = int(request.form['cantidad'])
+    """Actualizar cantidad de un producto en el carrito"""
+    cantidad = int(request.form.get('cantidad', 0))
     
     if 'carrito' in session:
-        carrito = Carrito(session.get('usuario_id'))
-        for item_id, item in session['carrito'].get('items', {}).items():
-            prod = inventario.obtener_producto_por_id(int(item['producto_id']))
-            if prod:
-                carrito.agregar_item(prod, item['cantidad'])
+        carrito = session['carrito']
+        producto_id_str = str(producto_id)
         
-        if cantidad > 0:
-            prod = inventario.obtener_producto_por_id(producto_id)
-            if prod:
-                carrito.agregar_item(prod, cantidad)
-        else:
-            carrito.quitar_item(producto_id)
-        
-        session['carrito'] = carrito.to_dict()
+        if producto_id_str in carrito['items']:
+            if cantidad <= 0:
+                del carrito['items'][producto_id_str]
+                flash('Producto eliminado del carrito', 'success')
+            else:
+                carrito['items'][producto_id_str]['cantidad'] = cantidad
+                carrito['items'][producto_id_str]['subtotal'] = cantidad * carrito['items'][producto_id_str]['precio']
+            
+            # Recalcular totales
+            total = 0
+            cantidad_total = 0
+            for item in carrito['items'].values():
+                total += item['subtotal']
+                cantidad_total += item['cantidad']
+            
+            carrito['total'] = total
+            carrito['cantidad_items'] = cantidad_total
+            session['carrito'] = carrito
+            session.modified = True
     
     return redirect(url_for('ver_carrito'))
 
 @app.route('/eliminar_del_carrito/<int:producto_id>')
 def eliminar_del_carrito(producto_id):
+    """Eliminar un producto del carrito"""
     if 'carrito' in session:
-        carrito = Carrito(session.get('usuario_id'))
-        for item_id, item in session['carrito'].get('items', {}).items():
-            prod = inventario.obtener_producto_por_id(int(item['producto_id']))
-            if prod:
-                carrito.agregar_item(prod, item['cantidad'])
+        carrito = session['carrito']
+        producto_id_str = str(producto_id)
         
-        carrito.quitar_item(producto_id)
-        session['carrito'] = carrito.to_dict()
-        flash('Producto eliminado', 'success')
+        if producto_id_str in carrito['items']:
+            del carrito['items'][producto_id_str]
+            
+            # Recalcular totales
+            total = 0
+            cantidad_total = 0
+            for item in carrito['items'].values():
+                total += item['subtotal']
+                cantidad_total += item['cantidad']
+            
+            carrito['total'] = total
+            carrito['cantidad_items'] = cantidad_total
+            session['carrito'] = carrito
+            session.modified = True
+            flash('Producto eliminado del carrito', 'success')
     
     return redirect(url_for('ver_carrito'))
 
 @app.route('/finalizar_compra')
 def finalizar_compra():
+    """Finalizar la compra"""
     if 'usuario_id' not in session:
-        flash('Debes iniciar sesión', 'error')
+        flash('Debes iniciar sesión para finalizar la compra', 'error')
         return redirect(url_for('login'))
     
-    flash('¡Compra realizada!', 'success')
+    if 'carrito' not in session or not session['carrito'].get('items'):
+        flash('Tu carrito está vacío', 'error')
+        return redirect(url_for('ver_carrito'))
+    
+    # Aquí iría la lógica para procesar la compra
+    flash('¡Compra realizada con éxito!', 'success')
     session.pop('carrito', None)
     return redirect(url_for('inicio'))
 
-# ----- RUTAS EXISTENTES -----
-@app.route('/')
-def inicio():
-    productos = inventario.obtener_todos()
-    prod_dict = {}
-    for p in productos:
-        key = p.nombre.lower().replace(' ', '_')
-        prod_dict[key] = {
-            'id': p.id,
-            'nombre': p.nombre,
-            'precio': f"${p.precio:.2f}",
-            'stock': 'Disponible' if p.cantidad > 5 else 'Stock Limitado',
-            'descripcion': p.descripcion
-        }
-    return render_template('index.html', productos=prod_dict)
-
-@app.route('/producto/<nombre>')
-def producto(nombre):
-    nombre = nombre.lower().replace('_', ' ')
-    encontrados = inventario.buscar_productos(nombre)
-    
-    if encontrados:
-        p = encontrados[0]
-        return render_template('producto.html', prod={
-            'nombre': p.nombre,
-            'precio': f"${p.precio:.2f}",
-            'stock': 'Disponible' if p.cantidad > 5 else 'Stock Limitado',
-            'descripcion': p.descripcion,
-            'id': p.id
-        })
-    return render_template('404_producto.html', nombre=nombre), 404
-
-@app.route('/categoria/<tipo>')
-def categoria(tipo):
-    if tipo in Inventario.CATEGORIAS_VALIDAS:
-        productos = inventario.obtener_por_categoria(tipo)
-        return render_template('categoria.html', tipo=tipo, 
-                             productos=productos, hay_productos=len(productos)>0)
-    return render_template('404_categoria.html', tipo=tipo), 404
-
-@app.route('/contacto')
-def contacto():
-    return render_template('contacto.html')
-
-@app.route('/about')
-def about():
-    return render_template('about.html')
-
 if __name__ == '__main__':
+    print("=" * 50)
+    print("🚀 Servidor iniciado correctamente")
+    print("📱 Accede a: http://127.0.0.1:5000")
+    print("=" * 50)
     app.run(debug=True)

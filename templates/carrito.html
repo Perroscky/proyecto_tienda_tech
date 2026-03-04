@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Carrito de Compras | Tienda Tech{% endblock %}
+
+{% block content %}
+<div class="carrito-container">
+    <h1>🛒 Carrito de Compras</h1>
+    
+    {% if carrito and carrito.items %}
+        <div class="carrito-items">
+            {% for producto_id, item in carrito.items.items() %}
+            <div class="carrito-item">
+                <div class="item-info">
+                    <h3>{{ item.nombre }}</h3>
+                    <p>Precio unitario: ${{ "%.2f"|format(item.precio) }}</p>
+                </div>
+                
+                <div class="item-cantidad">
+                    <form method="POST" action="{{ url_for('actualizar_carrito', producto_id=item.producto_id) }}">
+                        <input type="number" name="cantidad" value="{{ item.cantidad }}" min="0">
+                        <button type="submit" class="btn-actualizar">↻</button>
+                    </form>
+                </div>
+                
+                <div class="item-subtotal">
+                    <p class="subtotal">${{ "%.2f"|format(item.subtotal) }}</p>
+                    <a href="{{ url_for('eliminar_del_carrito', producto_id=item.producto_id) }}" class="btn-eliminar">✖</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="carrito-total">
+            <h2>Total: ${{ "%.2f"|format(carrito.total) }}</h2>
+            <p>{{ carrito.cantidad_items }} artículos</p>
+            
+            <div class="carrito-acciones">
+                <a href="{{ url_for('inicio') }}" class="btn-secondary">← Seguir Comprando</a>
+                
+                {% if session.usuario_id %}
+                <a href="{{ url_for('finalizar_compra') }}" class="btn-primary">Finalizar Compra ✓</a>
+                {% else %}
+                <a href="{{ url_for('login') }}" class="btn-primary">Inicia sesión para comprar</a>
+                {% endif %}
+            </div>
+        </div>
+    {% else %}
+        <div class="carrito-vacio">
+            <p>Tu carrito está vacío</p>
+            <a href="{{ url_for('inicio') }}" class="btn-primary">Ver Productos</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
