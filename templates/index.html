@@ -20,9 +20,26 @@
             <a href="/categoria/audio">Audio</a>
             <a href="/contacto">Contacto</a>
             <a href="/about">Acerca de</a>
+            {% if session.usuario_id %}
+                <a href="/logout">🚪 Cerrar Sesión</a>
+            {% else %}
+                <a href="/login">🔐 Iniciar Sesión</a>
+                <a href="/registro">📝 Registrarse</a>
+            {% endif %}
+            <a href="/carrito">🛒 Carrito</a>
         </nav>
         
         <main>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div style="padding: 10px; margin: 10px 0; border-radius: 5px; background-color: {% if category == 'error' %}#f8d7da{% else %}#d4edda{% endif %};">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
             <section class="welcome">
                 <h2>🎯 Catálogo de Productos</h2>
                 <p>Descubre nuestra selección de tecnología premium</p>
@@ -32,20 +49,14 @@
                 <div class="producto-grid">
                     {% for key, prod in productos.items() %}
                     <div class="producto-card">
-                        <div class="producto-icon">
-                            {% if 'laptop' in key %}🖥️
-                            {% elif 'mouse' in key %}🖱️
-                            {% elif 'teclado' in key %}⌨️
-                            {% elif 'monitor' in key %}🖥️
-                            {% elif 'audifonos' in key %}🎧
-                            {% elif 'webcam' in key %}📹
-                            {% else %}📦
-                            {% endif %}
-                        </div>
+                        <div class="producto-icon">📦</div>
                         <h3>{{ prod['nombre'] }}</h3>
                         <p class="precio">{{ prod['precio'] }}</p>
                         <p class="stock">{{ prod['stock'] }}</p>
-                        <a href="/producto/{{ key }}" class="btn-ver">Ver Detalles</a>
+                        <div style="display: flex; gap: 5px; justify-content: center;">
+                            <a href="/producto/{{ key }}" class="btn-ver">Ver Detalles</a>
+                            <a href="/agregar_al_carrito/{{ prod.id }}" class="btn-ver" style="background: #27ae60;">🛒</a>
+                        </div>
                     </div>
                     {% endfor %}
                 </div>
@@ -53,7 +64,6 @@
             
             <section class="promociones">
                 <h2>🔥 Ofertas Especiales</h2>
-                <p>Aprovecha nuestras promociones exclusivas</p>
                 <div class="promo-banner">
                     <p>✨ Envío gratis en compras mayores a $100</p>
                     <p>💳 12 meses sin intereses</p>

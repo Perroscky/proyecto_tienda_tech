@@ -1,139 +1,212 @@
-# app.py
-
-from flask import Flask, render_template
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 from models.inventario import Inventario
+from models.usuario import Usuario
+from models.carrito import Carrito
 from database.db_manager import DatabaseManager
 
 app = Flask(__name__)
+app.secret_key = 'clave_secreta_proyecto_tienda_tech'
 
-# Base de datos simulada de productos (se mantiene para migración)
-productos_db = {
-    'laptop': {
-        'nombre': 'Laptop Dell XPS 15',
-        'precio': '$1,299',
-        'stock': 'Disponible',
-        'descripcion': 'Laptop de alto rendimiento con procesador Intel i7, 16GB RAM, 512GB SSD'
-    },
-    'mouse': {
-        'nombre': 'Mouse Logitech MX Master 3',
-        'precio': '$99',
-        'stock': 'Disponible',
-        'descripcion': 'Mouse inalámbrico ergonómico con sensor de alta precisión'
-    },
-    'teclado': {
-        'nombre': 'Teclado Mecánico Corsair K95',
-        'precio': '$179',
-        'stock': 'Disponible',
-        'descripcion': 'Teclado mecánico RGB con switches Cherry MX'
-    },
-    'monitor': {
-        'nombre': 'Monitor LG UltraWide 34"',
-        'precio': '$599',
-        'stock': 'Disponible',
-        'descripcion': 'Monitor ultrawide 21:9, resolución 3440x1440, 144Hz'
-    },
-    'audifonos': {
-        'nombre': 'Audífonos Sony WH-1000XM5',
-        'precio': '$399',
-        'stock': 'Disponible',
-        'descripcion': 'Audífonos inalámbricos con cancelación de ruido activa'
-    },
-    'webcam': {
-        'nombre': 'Webcam Logitech C920',
-        'precio': '$79',
-        'stock': 'Stock Limitado',
-        'descripcion': 'Webcam Full HD 1080p con micrófono estéreo'
-    }
-}
-
-# Inicializar el inventario (se carga automáticamente desde la BD)
+# Inicializar
 inventario = Inventario()
+db = DatabaseManager()
 
-# Opcional: Migrar datos iniciales si la BD está vacía
-def verificar_y_migrar_datos():
-    """Verifica si hay datos en la BD y migra los iniciales si es necesario"""
-    db = DatabaseManager("proyecto_tienda_tech.db")
-    productos = db.obtener_todos_productos()
+# Crear tablas adicionales
+db.crear_tabla_usuarios()
+db.crear_tabla_carrito()
+
+# ----- RUTAS DE AUTENTICACIÓN -----
+@app.route('/registro', methods=['GET', 'POST'])
+def registro():
+    if request.method == 'POST':
+        try:
+            nombre = request.form['nombre']
+            email = request.form['email']
+            password = request.form['password']
+            fecha = request.form['fecha_nacimiento']
+            
+            if not Usuario.validar_email(email):
+                flash('Email no válido', 'error')
+                return render_template('registro.html')
+            
+            if db.obtener_usuario_por_email(email):
+                flash('Email ya registrado', 'error')
+                return render_template('registro.html')
+            
+            usuario = Usuario(None, nombre, email, password, fecha)
+            usuario_id = db.insertar_usuario(usuario)
+            
+            session['usuario_id'] = usuario_id
+            session['usuario_nombre'] = nombre
+            
+            db.crear_carrito(usuario_id)
+            flash(f'¡Bienvenido {nombre}!', 'success')
+            return redirect(url_for('inicio'))
+            
+        except ValueError as e:
+            flash(str(e), 'error')
     
-    if not productos:
-        print("🔄 Base de datos vacía. Migrando productos iniciales...")
-        db.migrar_productos_iniciales()
-        # Recargar inventario después de la migración
-        global inventario
-        inventario = Inventario()
-        print("✅ Migración completada. Productos disponibles en la tienda.")
-    else:
-        print(f"✅ Base de datos con {len(productos)} productos cargados.")
+    return render_template('registro.html')
 
-# Ejecutar verificación al iniciar
-verificar_y_migrar_datos()
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        
+        data = db.obtener_usuario_por_email(email)
+        
+        if data:
+            usuario = Usuario(data[0], data[1], data[2], password, data[4])
+            if usuario.verificar_password(password):
+                session['usuario_id'] = data[0]
+                session['usuario_nombre'] = data[1]
+                flash(f'¡Bienvenido {data[1]}!', 'success')
+                return redirect(url_for('inicio'))
+        
+        flash('Email o contraseña incorrectos', 'error')
+    
+    return render_template('login.html')
 
-# Ruta principal
+@app.route('/registro/facebook')
+def registro_facebook():
+    flash('Registro con Facebook (simulado)', 'info')
+    return redirect(url_for('registro'))
+
+@app.route('/login/facebook')
+def login_facebook():
+    flash('Login con Facebook (simulado)', 'info')
+    return redirect(url_for('login'))
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash('Sesión cerrada', 'success')
+    return redirect(url_for('inicio'))
+
+# ----- RUTAS DEL CARRITO -----
+@app.route('/agregar_al_carrito/<int:producto_id>')
+def agregar_al_carrito(producto_id):
+    producto = inventario.obtener_producto_por_id(producto_id)
+    if not producto:
+        flash('Producto no encontrado', 'error')
+        return redirect(url_for('inicio'))
+    
+    if 'carrito' not in session:
+        session['carrito'] = Carrito(session.get('usuario_id')).to_dict()
+    
+    carrito = Carrito(session.get('usuario_id'))
+    for item_id, item in session['carrito'].get('items', {}).items():
+        prod = inventario.obtener_producto_por_id(int(item['producto_id']))
+        if prod:
+            carrito.agregar_item(prod, item['cantidad'])
+    
+    carrito.agregar_item(producto)
+    session['carrito'] = carrito.to_dict()
+    
+    flash(f'{producto.nombre} agregado al carrito', 'success')
+    return redirect(url_for('ver_carrito'))
+
+@app.route('/carrito')
+def ver_carrito():
+    if 'carrito' not in session:
+        session['carrito'] = Carrito(session.get('usuario_id')).to_dict()
+    return render_template('carrito.html')
+
+@app.route('/actualizar_carrito/<int:producto_id>', methods=['POST'])
+def actualizar_carrito(producto_id):
+    cantidad = int(request.form['cantidad'])
+    
+    if 'carrito' in session:
+        carrito = Carrito(session.get('usuario_id'))
+        for item_id, item in session['carrito'].get('items', {}).items():
+            prod = inventario.obtener_producto_por_id(int(item['producto_id']))
+            if prod:
+                carrito.agregar_item(prod, item['cantidad'])
+        
+        if cantidad > 0:
+            prod = inventario.obtener_producto_por_id(producto_id)
+            if prod:
+                carrito.agregar_item(prod, cantidad)
+        else:
+            carrito.quitar_item(producto_id)
+        
+        session['carrito'] = carrito.to_dict()
+    
+    return redirect(url_for('ver_carrito'))
+
+@app.route('/eliminar_del_carrito/<int:producto_id>')
+def eliminar_del_carrito(producto_id):
+    if 'carrito' in session:
+        carrito = Carrito(session.get('usuario_id'))
+        for item_id, item in session['carrito'].get('items', {}).items():
+            prod = inventario.obtener_producto_por_id(int(item['producto_id']))
+            if prod:
+                carrito.agregar_item(prod, item['cantidad'])
+        
+        carrito.quitar_item(producto_id)
+        session['carrito'] = carrito.to_dict()
+        flash('Producto eliminado', 'success')
+    
+    return redirect(url_for('ver_carrito'))
+
+@app.route('/finalizar_compra')
+def finalizar_compra():
+    if 'usuario_id' not in session:
+        flash('Debes iniciar sesión', 'error')
+        return redirect(url_for('login'))
+    
+    flash('¡Compra realizada!', 'success')
+    session.pop('carrito', None)
+    return redirect(url_for('inicio'))
+
+# ----- RUTAS EXISTENTES -----
 @app.route('/')
 def inicio():
-    # Obtener todos los productos del inventario
     productos = inventario.obtener_todos()
-    
-    # Convertir a formato para la plantilla
-    productos_template = {}
-    for prod in productos:
-        # Usar el nombre como clave para mantener compatibilidad con plantillas existentes
-        key = prod.nombre.lower().replace(' ', '_').replace('"', '').replace("'", '')
-        productos_template[key] = {
-            'nombre': prod.nombre,
-            'precio': f"${prod.precio:.2f}",
-            'stock': 'Disponible' if prod.cantidad > 5 else 'Stock Limitado' if prod.cantidad > 0 else 'Agotado',
-            'descripcion': prod.descripcion
+    prod_dict = {}
+    for p in productos:
+        key = p.nombre.lower().replace(' ', '_')
+        prod_dict[key] = {
+            'id': p.id,
+            'nombre': p.nombre,
+            'precio': f"${p.precio:.2f}",
+            'stock': 'Disponible' if p.cantidad > 5 else 'Stock Limitado',
+            'descripcion': p.descripcion
         }
-    
-    return render_template('index.html', productos=productos_template)
+    return render_template('index.html', productos=prod_dict)
 
-# Ruta dinámica para productos
 @app.route('/producto/<nombre>')
 def producto(nombre):
-    # Buscar el producto por nombre (búsqueda aproximada)
-    nombre_lower = nombre.lower().replace('_', ' ')
-    productos_encontrados = inventario.buscar_productos(nombre_lower)
+    nombre = nombre.lower().replace('_', ' ')
+    encontrados = inventario.buscar_productos(nombre)
     
-    if productos_encontrados:
-        prod = productos_encontrados[0]  # Tomar el primero encontrado
-        prod_dict = {
-            'nombre': prod.nombre,
-            'precio': f"${prod.precio:.2f}",
-            'stock': 'Disponible' if prod.cantidad > 5 else 'Stock Limitado' if prod.cantidad > 0 else 'Agotado',
-            'descripcion': prod.descripcion,
-            'cantidad': prod.cantidad,
-            'categoria': prod.categoria
-        }
-        return render_template('producto.html', prod=prod_dict)
-    else:
-        return render_template('404_producto.html', nombre=nombre), 404
+    if encontrados:
+        p = encontrados[0]
+        return render_template('producto.html', prod={
+            'nombre': p.nombre,
+            'precio': f"${p.precio:.2f}",
+            'stock': 'Disponible' if p.cantidad > 5 else 'Stock Limitado',
+            'descripcion': p.descripcion,
+            'id': p.id
+        })
+    return render_template('404_producto.html', nombre=nombre), 404
 
-# Ruta para categorías
 @app.route('/categoria/<tipo>')
 def categoria(tipo):
-    categorias_validas = Inventario.CATEGORIAS_VALIDAS
-    tipo_lower = tipo.lower()
-    
-    if tipo_lower in categorias_validas:
-        # Obtener productos de esa categoría
-        productos_categoria = inventario.obtener_por_categoria(tipo_lower)
-        return render_template('categoria.html', tipo=tipo_lower, 
-                             productos=productos_categoria, 
-                             hay_productos=len(productos_categoria) > 0)
-    else:
-        return render_template('404_categoria.html', tipo=tipo), 404
+    if tipo in Inventario.CATEGORIAS_VALIDAS:
+        productos = inventario.obtener_por_categoria(tipo)
+        return render_template('categoria.html', tipo=tipo, 
+                             productos=productos, hay_productos=len(productos)>0)
+    return render_template('404_categoria.html', tipo=tipo), 404
 
-# Ruta de contacto
 @app.route('/contacto')
 def contacto():
     return render_template('contacto.html')
 
-# Ruta acerca de
 @app.route('/about')
 def about():
     return render_template('about.html')
 
 if __name__ == '__main__':
-    print("🚀 Iniciando proyecto_tienda_tech...")
     app.run(debug=True)

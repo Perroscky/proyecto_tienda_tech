@@ -1,5 +1,3 @@
-# database/db_manager.py
-
 import sqlite3
 import os
 
@@ -240,3 +238,106 @@ class DatabaseManager:
             'webcam': 'perifericos'
         }
         return categorias_map.get(key, 'otros')
+    
+        # ----- MÉTODOS PARA USUARIOS (NUEVOS) -----
+        
+    def crear_tabla_usuarios(self):
+        """Crea la tabla de usuarios en la base de datos"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS usuarios (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    nombre TEXT NOT NULL,
+                    email TEXT UNIQUE NOT NULL,
+                    password TEXT NOT NULL,
+                    fecha_nacimiento TEXT NOT NULL,
+                    proveedor TEXT DEFAULT 'email',
+                    fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            conn.commit()
+            print("✅ Tabla 'usuarios' creada/verificada")
+    
+    def insertar_usuario(self, usuario):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO usuarios (nombre, email, password, fecha_nacimiento, proveedor)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (
+                usuario.nombre,
+                usuario.email,
+                usuario._password,
+                usuario._fecha_nacimiento if isinstance(usuario._fecha_nacimiento, str) 
+                    else usuario._fecha_nacimiento.strftime("%Y-%m-%d"),
+                usuario.proveedor
+            ))
+            conn.commit()
+            return cursor.lastrowid
+    
+    def obtener_usuario_por_email(self, email):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM usuarios WHERE email = ?', (email,))
+            return cursor.fetchone()
+    
+    def obtener_usuario_por_id(self, id):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM usuarios WHERE id = ?', (id,))
+            return cursor.fetchone()
+    
+    # ----- MÉTODOS PARA CARRITO (NUEVOS) -----
+    def crear_tabla_carrito(self):
+        """Crea las tablas relacionadas con el carrito"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Tabla de carritos
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS carritos (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    usuario_id INTEGER,
+                    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    estado TEXT DEFAULT 'activo',
+                    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+                )
+            ''')
+            
+            # Tabla de items del carrito
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS carrito_items (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    carrito_id INTEGER NOT NULL,
+                    producto_id INTEGER NOT NULL,
+                    cantidad INTEGER NOT NULL,
+                    precio_unitario REAL NOT NULL,
+                    fecha_agregado TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (carrito_id) REFERENCES carritos(id),
+                    FOREIGN KEY (producto_id) REFERENCES productos(id)
+                )
+            ''')
+            
+            conn.commit()
+            print("✅ Tablas de carrito creadas/verificadas")
+    
+    def crear_carrito(self, usuario_id=None):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO carritos (usuario_id, estado)
+                VALUES (?, 'activo')
+            ''', (usuario_id,))
+            conn.commit()
+            return cursor.lastrowid
+    
+    def obtener_carrito_activo(self, usuario_id):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT * FROM carritos 
+                WHERE usuario_id = ? AND estado = 'activo'
+                ORDER BY fecha_creacion DESC LIMIT 1
+            ''', (usuario_id,))
+            return cursor.fetchone()
