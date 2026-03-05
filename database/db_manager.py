@@ -40,17 +40,6 @@ class DatabaseManager:
                 )
             ''')
             
-            # Tabla de clientes (opcional para el proyecto)
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS clientes (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    nombre TEXT NOT NULL,
-                    email TEXT UNIQUE,
-                    telefono TEXT,
-                    fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            
             # Índice para búsquedas rápidas por nombre
             cursor.execute('''
                 CREATE INDEX IF NOT EXISTS idx_productos_nombre 
@@ -58,9 +47,9 @@ class DatabaseManager:
             ''')
             
             conn.commit()
-            print("✅ Tablas creadas/verificadas correctamente")
+            print("✅ Tabla de productos creada/verificada correctamente")
     
-    # ----- OPERACIONES CRUD PARA PRODUCTOS -----
+    # ----- MÉTODOS PARA PRODUCTOS (CRUD) -----
     
     def insertar_producto(self, producto):
         """
@@ -175,7 +164,203 @@ class DatabaseManager:
             cursor.execute('SELECT 1 FROM productos WHERE id = ?', (id,))
             return cursor.fetchone() is not None
     
-    # ----- MÉTODOS PARA MIGRACIÓN DE DATOS INICIALES -----
+    # ----- MÉTODOS PARA USUARIOS -----
+    
+    def crear_tabla_usuarios(self):
+        """Crea la tabla de usuarios en la base de datos"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS usuarios (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    nombre TEXT NOT NULL,
+                    email TEXT UNIQUE NOT NULL,
+                    password TEXT NOT NULL,
+                    fecha_nacimiento TEXT NOT NULL,
+                    proveedor TEXT DEFAULT 'email',
+                    fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            conn.commit()
+            print("✅ Tabla 'usuarios' creada/verificada")
+    
+    def insertar_usuario(self, usuario):
+        """
+        Inserta un nuevo usuario en la base de datos
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO usuarios (nombre, email, password, fecha_nacimiento, proveedor)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (
+                usuario.nombre,
+                usuario.email,
+                usuario._password,
+                usuario._fecha_nacimiento if isinstance(usuario._fecha_nacimiento, str) 
+                    else usuario._fecha_nacimiento.strftime("%Y-%m-%d"),
+                usuario.proveedor
+            ))
+            conn.commit()
+            return cursor.lastrowid
+    
+    def obtener_usuario_por_email(self, email):
+        """
+        Obtiene un usuario por su email
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM usuarios WHERE email = ?', (email,))
+            return cursor.fetchone()
+    
+    def obtener_usuario_por_id(self, id):
+        """
+        Obtiene un usuario por su ID
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM usuarios WHERE id = ?', (id,))
+            return cursor.fetchone()
+    
+    # ----- MÉTODOS PARA CARRITO -----
+    
+    def crear_tabla_carrito(self):
+        """Crea las tablas relacionadas con el carrito"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Tabla de carritos
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS carritos (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    usuario_id INTEGER,
+                    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    estado TEXT DEFAULT 'activo',
+                    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+                )
+            ''')
+            
+            # Tabla de items del carrito
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS carrito_items (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    carrito_id INTEGER NOT NULL,
+                    producto_id INTEGER NOT NULL,
+                    cantidad INTEGER NOT NULL,
+                    precio_unitario REAL NOT NULL,
+                    fecha_agregado TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (carrito_id) REFERENCES carritos(id),
+                    FOREIGN KEY (producto_id) REFERENCES productos(id)
+                )
+            ''')
+            
+            conn.commit()
+            print("✅ Tablas de carrito creadas/verificadas")
+    
+    def crear_carrito(self, usuario_id=None):
+        """
+        Crea un nuevo carrito para un usuario
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO carritos (usuario_id, estado)
+                VALUES (?, 'activo')
+            ''', (usuario_id,))
+            conn.commit()
+            return cursor.lastrowid
+    
+    def obtener_carrito_activo(self, usuario_id):
+        """
+        Obtiene el carrito activo de un usuario
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT * FROM carritos 
+                WHERE usuario_id = ? AND estado = 'activo'
+                ORDER BY fecha_creacion DESC LIMIT 1
+            ''', (usuario_id,))
+            return cursor.fetchone()
+    
+    def agregar_item_carrito(self, carrito_id, producto_id, cantidad, precio):
+        """
+        Agrega un item al carrito
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO carrito_items (carrito_id, producto_id, cantidad, precio_unitario)
+                VALUES (?, ?, ?, ?)
+            ''', (carrito_id, producto_id, cantidad, precio))
+            conn.commit()
+            return cursor.lastrowid
+    
+    def obtener_items_carrito(self, carrito_id):
+        """
+        Obtiene los items de un carrito
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT ci.*, p.nombre, p.descripcion 
+                FROM carrito_items ci
+                JOIN productos p ON ci.producto_id = p.id
+                WHERE ci.carrito_id = ?
+            ''', (carrito_id,))
+            return cursor.fetchall()
+    
+    def vaciar_carrito(self, carrito_id):
+        """
+        Vacía un carrito
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM carrito_items WHERE carrito_id = ?', (carrito_id,))
+            conn.commit()
+            return cursor.rowcount
+    
+    def finalizar_compra(self, carrito_id, usuario_id, total):
+        """
+        Finaliza una compra (crea venta y actualiza stock)
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Crear venta
+            cursor.execute('''
+                INSERT INTO ventas (usuario_id, total)
+                VALUES (?, ?)
+            ''', (usuario_id, total))
+            venta_id = cursor.lastrowid
+            
+            # Obtener items del carrito
+            items = self.obtener_items_carrito(carrito_id)
+            
+            # Insertar detalles y actualizar stock
+            for item in items:
+                # Insertar detalle
+                cursor.execute('''
+                    INSERT INTO venta_detalles (venta_id, producto_id, cantidad, precio_unitario, subtotal)
+                    VALUES (?, ?, ?, ?, ?)
+                ''', (venta_id, item[2], item[3], item[4], item[3] * item[4]))
+                
+                # Actualizar stock
+                cursor.execute('''
+                    UPDATE productos 
+                    SET cantidad = cantidad - ? 
+                    WHERE id = ?
+                ''', (item[3], item[2]))
+            
+            # Marcar carrito como completado
+            cursor.execute('''
+                UPDATE carritos SET estado = 'completado' WHERE id = ?
+            ''', (carrito_id,))
+            
+            conn.commit()
+            return venta_id
+    
+    # ----- MÉTODO PARA MIGRACIÓN DE DATOS INICIALES -----
     
     def migrar_productos_iniciales(self):
         """
@@ -238,106 +423,3 @@ class DatabaseManager:
             'webcam': 'perifericos'
         }
         return categorias_map.get(key, 'otros')
-    
-        # ----- MÉTODOS PARA USUARIOS (NUEVOS) -----
-        
-    def crear_tabla_usuarios(self):
-        """Crea la tabla de usuarios en la base de datos"""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS usuarios (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    nombre TEXT NOT NULL,
-                    email TEXT UNIQUE NOT NULL,
-                    password TEXT NOT NULL,
-                    fecha_nacimiento TEXT NOT NULL,
-                    proveedor TEXT DEFAULT 'email',
-                    fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            conn.commit()
-            print("✅ Tabla 'usuarios' creada/verificada")
-    
-    def insertar_usuario(self, usuario):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO usuarios (nombre, email, password, fecha_nacimiento, proveedor)
-                VALUES (?, ?, ?, ?, ?)
-            ''', (
-                usuario.nombre,
-                usuario.email,
-                usuario._password,
-                usuario._fecha_nacimiento if isinstance(usuario._fecha_nacimiento, str) 
-                    else usuario._fecha_nacimiento.strftime("%Y-%m-%d"),
-                usuario.proveedor
-            ))
-            conn.commit()
-            return cursor.lastrowid
-    
-    def obtener_usuario_por_email(self, email):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT * FROM usuarios WHERE email = ?', (email,))
-            return cursor.fetchone()
-    
-    def obtener_usuario_por_id(self, id):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT * FROM usuarios WHERE id = ?', (id,))
-            return cursor.fetchone()
-    
-    # ----- MÉTODOS PARA CARRITO (NUEVOS) -----
-    def crear_tabla_carrito(self):
-        """Crea las tablas relacionadas con el carrito"""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            
-            # Tabla de carritos
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS carritos (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    usuario_id INTEGER,
-                    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    estado TEXT DEFAULT 'activo',
-                    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
-                )
-            ''')
-            
-            # Tabla de items del carrito
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS carrito_items (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    carrito_id INTEGER NOT NULL,
-                    producto_id INTEGER NOT NULL,
-                    cantidad INTEGER NOT NULL,
-                    precio_unitario REAL NOT NULL,
-                    fecha_agregado TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (carrito_id) REFERENCES carritos(id),
-                    FOREIGN KEY (producto_id) REFERENCES productos(id)
-                )
-            ''')
-            
-            conn.commit()
-            print("✅ Tablas de carrito creadas/verificadas")
-    
-    def crear_carrito(self, usuario_id=None):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO carritos (usuario_id, estado)
-                VALUES (?, 'activo')
-            ''', (usuario_id,))
-            conn.commit()
-            return cursor.lastrowid
-    
-    def obtener_carrito_activo(self, usuario_id):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                SELECT * FROM carritos 
-                WHERE usuario_id = ? AND estado = 'activo'
-                ORDER BY fecha_creacion DESC LIMIT 1
-            ''', (usuario_id,))
-            return cursor.fetchone()

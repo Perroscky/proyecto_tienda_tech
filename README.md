@@ -1,62 +1,64 @@
-# 🛒 Tienda Tech Online
+# 🖥️ PROYECTO_TIENDA_TECH
 
-Tienda online de productos tecnológicos desarrollada con Flask.
+Sistema de gestión de inventario para tienda de artículos tecnológicos desarrollado con Flask.
 
-## 📋 Descripción
+---
 
-Sistema de e-commerce para venta de productos de tecnología con catálogo dinámico y rutas personalizadas.
+## 📋 DESCRIPCIÓN
 
-## 🚀 Características
+Aplicación web completa que permite:
+- Visualizar catálogo de productos tecnológicos
+- Registrar usuarios con validación de edad (+18)
+- Iniciar sesión (email y Facebook simulado)
+- Agregar productos al carrito de compras
+- Gestionar inventario desde consola
+- Persistir datos en TXT, JSON, CSV y SQLite
 
-- Catálogo de productos con detalles
-- Rutas dinámicas por producto
-- Categorías de productos
-- Información de contacto
-- Diseño responsive
+---
 
-## 📦 Instalación
+## 🚀 FUNCIONALIDADES POR SEMANA
 
-1. Crear entorno virtual: python -m venv venv
+### **Semana 09 - Configuración básica y rutas**
+- Estructura MVC del proyecto
+- Rutas principales: `/`, `/producto/<nombre>`, `/categoria/<tipo>`
+- Catálogo inicial con 6 productos tecnológicos
+- Diseño CSS con gradientes y responsive
 
-2. Activar entorno virtual: venv\Scripts\activate
+### **Semana 10 - Plantillas dinámicas**
+- Herencia con `base.html` (header, navbar, footer)
+- Templates: `index.html`, `producto.html`, `categoria.html`
+- Contenido dinámico con Jinja2 (`{% for %}`, `{% if %}`)
+- Páginas: contacto, about y 404 personalizadas
 
-3. Instalar dependencias: pip install -r requirements.txt
+### **Semana 11 - POO y validación de formularios**
+- Clases: `Producto`, `Inventario`, `Usuario`, `Carrito`
+- Colecciones: diccionarios, conjuntos (IDs únicos), tuplas (categorías)
+- Sistema de autenticación: registro (+18), login, logout
+- Carrito de compras: agregar, actualizar, eliminar productos
+- Estadísticas de inventario (total, valor, productos por categoría)
 
-4. Ejecutar la aplicación: python app.py
+### **Semana 12 - Persistencia de datos**
+- Archivos locales: `data/productos.txt`, `productos.json`, `productos.csv`
+- Base de datos SQLite con tablas: productos, usuarios, carritos
+- Rutas de gestión: `/datos` para ver y exportar datos entre formatos
+- Funciones: guardar/cargar desde TXT, JSON, CSV y SQLite
 
-5. Abrir en navegador: `http://127.0.0.1:5000`
+---
+## 🚀 CÓMO EJECUTAR
 
-## 🌐 Rutas Disponibles
 
-- `/` - Página principal con catálogo
-- `/producto/<nombre>` - Detalles de producto específico
-  - Ejemplos: `/producto/laptop`, `/producto/mouse`, `/producto/teclado`
-- `/categoria/<tipo>` - Productos por categoría
-- `/contacto` - Información de contacto
-- `/about` - Información sobre la tienda
+# 1. Crear entorno virtual
+python -m venv venv
+venv\Scripts\activate  # Windows
 
-## 📝 Actualizaciones del Proyecto
+# 2. Instalar dependencias
+pip install -r requirements.txt
 
-### Semana 9 (Proyecto Inicial)
-- Creación de la aplicación Flask
-- Implementación de rutas principales
-- Base de datos simulada de productos
-- Diseño CSS personalizado
-- Catálogo de 6 productos tecnológicos
+# 3. Ejecutar
+python app.py
 
-### Semana 10 (Plantillas con Herencia)
-- Implementación de plantillas dinámicas con Jinja2
-- Creación de plantilla base (base.html) con header, navbar y footer
-- Separación de estructura y contenido usando {% block content %}
-- Nuevas páginas creadas:
-  - about.html - Página "Acerca de" con información de la empresa
-  - producto.html - Vista detallada de productos
-  - categoria.html - Filtrado por categoría
-  - contacto.html - Información de contacto
-  - Páginas de error 404 personalizadas
-- Código más limpio y mantenible
-- Todas las rutas ahora usan render_template()
+# 5. Abrir navegador
+http://127.0.0.1:5000
 
-## Elaborado
-
-Alumno: Luis Samaniego - Proyecto Flask
+👨‍💻 AUTOR
+Luis Samaniego - Proyecto Semanas 9-12

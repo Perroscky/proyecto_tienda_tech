@@ -4,10 +4,23 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from models.inventario import Inventario
 from models.usuario import Usuario
 from database.db_manager import DatabaseManager
+import os
+import json
+import csv
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = 'clave_secreta_proyecto_tienda_tech'
 app.config['SESSION_TYPE'] = 'filesystem'
+
+# Configuración de archivos para persistencia (Semana 12)
+DATA_FOLDER = 'data'
+TXT_FILE = os.path.join(DATA_FOLDER, 'productos.txt')
+JSON_FILE = os.path.join(DATA_FOLDER, 'productos.json')
+CSV_FILE = os.path.join(DATA_FOLDER, 'productos.csv')
+
+# Crear carpeta data si no existe
+os.makedirs(DATA_FOLDER, exist_ok=True)
 
 # Inicializar componentes
 inventario = Inventario()
@@ -20,6 +33,139 @@ try:
     print("✅ Tablas creadas/verificadas correctamente")
 except Exception as e:
     print(f"⚠️ Error al crear tablas: {e}")
+
+# ----- FUNCIONES PARA MANEJO DE TXT -----
+def guardar_en_txt(producto):
+    """Guarda un producto en archivo TXT"""
+    try:
+        with open(TXT_FILE, 'a', encoding='utf-8') as f:
+            linea = f"{producto['id']}|{producto['nombre']}|{producto['precio']}|{producto['cantidad']}|{producto['categoria']}|{producto['descripcion']}\n"
+            f.write(linea)
+    except Exception as e:
+        print(f"Error guardando en TXT: {e}")
+
+def cargar_desde_txt():
+    """Carga productos desde archivo TXT"""
+    productos = []
+    try:
+        if os.path.exists(TXT_FILE):
+            with open(TXT_FILE, 'r', encoding='utf-8') as f:
+                for linea in f:
+                    partes = linea.strip().split('|')
+                    if len(partes) >= 5:
+                        producto = {
+                            'id': int(partes[0]),
+                            'nombre': partes[1],
+                            'precio': float(partes[2]),
+                            'cantidad': int(partes[3]),
+                            'categoria': partes[4],
+                            'descripcion': partes[5] if len(partes) > 5 else ''
+                        }
+                        productos.append(producto)
+    except Exception as e:
+        print(f"Error cargando TXT: {e}")
+    return productos
+
+# ----- FUNCIONES PARA MANEJO DE JSON -----
+def guardar_en_json(producto):
+    """Guarda un producto en archivo JSON"""
+    try:
+        productos = cargar_desde_json()
+        productos.append(producto)
+        with open(JSON_FILE, 'w', encoding='utf-8') as f:
+            json.dump(productos, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        print(f"Error guardando en JSON: {e}")
+
+def cargar_desde_json():
+    """Carga productos desde archivo JSON"""
+    try:
+        if os.path.exists(JSON_FILE):
+            with open(JSON_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+    except Exception as e:
+        print(f"Error cargando JSON: {e}")
+    return []
+
+# ----- FUNCIONES PARA MANEJO DE CSV -----
+def guardar_en_csv(producto):
+    """Guarda un producto en archivo CSV"""
+    try:
+        file_exists = os.path.exists(CSV_FILE)
+        with open(CSV_FILE, 'a', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            if not file_exists:
+                writer.writerow(['id', 'nombre', 'precio', 'cantidad', 'categoria', 'descripcion'])
+            writer.writerow([
+                producto['id'],
+                producto['nombre'],
+                producto['precio'],
+                producto['cantidad'],
+                producto['categoria'],
+                producto['descripcion']
+            ])
+    except Exception as e:
+        print(f"Error guardando en CSV: {e}")
+
+def cargar_desde_csv():
+    """Carga productos desde archivo CSV"""
+    productos = []
+    try:
+        if os.path.exists(CSV_FILE):
+            with open(CSV_FILE, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    producto = {
+                        'id': int(row['id']),
+                        'nombre': row['nombre'],
+                        'precio': float(row['precio']),
+                        'cantidad': int(row['cantidad']),
+                        'categoria': row['categoria'],
+                        'descripcion': row['descripcion']
+                    }
+                    productos.append(producto)
+    except Exception as e:
+        print(f"Error cargando CSV: {e}")
+    return productos
+
+# ----- FUNCIONES PARA MANEJO DE SQLITE -----
+def guardar_en_sqlite(producto):
+    """Guarda un producto en SQLite usando db_manager"""
+    try:
+        # Verificar si el producto ya existe
+        existe = db.obtener_producto_por_id(producto['id'])
+        if not existe:
+            from models.producto import Producto
+            nuevo_producto = Producto(
+                id=producto['id'],
+                nombre=producto['nombre'],
+                precio=producto['precio'],
+                cantidad=producto['cantidad'],
+                categoria=producto['categoria'],
+                descripcion=producto['descripcion']
+            )
+            db.insertar_producto(nuevo_producto)
+    except Exception as e:
+        print(f"Error guardando en SQLite: {e}")
+
+def cargar_desde_sqlite():
+    """Carga productos desde SQLite"""
+    productos = []
+    try:
+        data = db.obtener_todos_productos()
+        for prod in data:
+            producto = {
+                'id': prod[0],
+                'nombre': prod[1],
+                'precio': prod[2],
+                'cantidad': prod[3],
+                'categoria': prod[4],
+                'descripcion': prod[5] if len(prod) > 5 else ''
+            }
+            productos.append(producto)
+    except Exception as e:
+        print(f"Error cargando SQLite: {e}")
+    return productos
 
 # ----- RUTAS PÚBLICAS -----
 @app.route('/')
@@ -301,9 +447,145 @@ def finalizar_compra():
     session.pop('carrito', None)
     return redirect(url_for('inicio'))
 
+# ----- RUTAS PARA PERSISTENCIA (Semana 12) -----
+
+@app.route('/datos')
+def ver_datos():
+    """Vista principal de gestión de datos"""
+    # Cargar datos desde archivos
+    datos_txt = cargar_desde_txt()
+    datos_json = cargar_desde_json()
+    datos_csv = cargar_desde_csv()
+    datos_sqlite = cargar_desde_sqlite()
+    
+    return render_template('datos.html',
+                         datos_txt=datos_txt,
+                         datos_json=datos_json,
+                         datos_csv=datos_csv,
+                         datos_sqlite=datos_sqlite)
+
+@app.route('/datos/agregar', methods=['POST'])
+def agregar_producto_data():
+    """Agrega un producto a todos los formatos"""
+    try:
+        nombre = request.form.get('nombre')
+        precio = float(request.form.get('precio'))
+        cantidad = int(request.form.get('cantidad'))
+        categoria = request.form.get('categoria')
+        descripcion = request.form.get('descripcion', '')
+        
+        # Generar ID único basado en timestamp
+        producto_id = int(datetime.now().timestamp())
+        
+        producto = {
+            'id': producto_id,
+            'nombre': nombre,
+            'precio': precio,
+            'cantidad': cantidad,
+            'categoria': categoria,
+            'descripcion': descripcion
+        }
+        
+        # Guardar en todos los formatos
+        guardar_en_txt(producto)
+        guardar_en_json(producto)
+        guardar_en_csv(producto)
+        guardar_en_sqlite(producto)
+        
+        flash('Producto guardado exitosamente en todos los formatos', 'success')
+    except Exception as e:
+        flash(f'Error al guardar el producto: {str(e)}', 'error')
+    
+    return redirect(url_for('ver_datos'))
+
+@app.route('/datos/cargar/txt')
+def cargar_txt():
+    """Carga y muestra datos TXT"""
+    productos = cargar_desde_txt()
+    return render_template('datos_tabla.html', productos=productos, formato='TXT')
+
+@app.route('/datos/cargar/json')
+def cargar_json():
+    """Carga y muestra datos JSON"""
+    productos = cargar_desde_json()
+    return render_template('datos_tabla.html', productos=productos, formato='JSON')
+
+@app.route('/datos/cargar/csv')
+def cargar_csv():
+    """Carga y muestra datos CSV"""
+    productos = cargar_desde_csv()
+    return render_template('datos_tabla.html', productos=productos, formato='CSV')
+
+@app.route('/datos/cargar/sqlite')
+def cargar_sqlite():
+    """Carga y muestra datos SQLite"""
+    productos = cargar_desde_sqlite()
+    return render_template('datos_tabla.html', productos=productos, formato='SQLite')
+
+@app.route('/datos/exportar/txt')
+def exportar_txt():
+    """Exporta productos actuales a TXT"""
+    try:
+        productos = inventario.obtener_todos()
+        with open(TXT_FILE, 'w', encoding='utf-8') as f:
+            for p in productos:
+                linea = f"{p.id}|{p.nombre}|{p.precio}|{p.cantidad}|{p.categoria}|{p.descripcion}\n"
+                f.write(linea)
+        flash('Datos exportados a TXT correctamente', 'success')
+    except Exception as e:
+        flash(f'Error exportando a TXT: {str(e)}', 'error')
+    return redirect(url_for('ver_datos'))
+
+@app.route('/datos/exportar/json')
+def exportar_json():
+    """Exporta productos actuales a JSON"""
+    try:
+        productos = inventario.obtener_todos()
+        data = [p.to_dict() for p in productos]
+        with open(JSON_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        flash('Datos exportados a JSON correctamente', 'success')
+    except Exception as e:
+        flash(f'Error exportando a JSON: {str(e)}', 'error')
+    return redirect(url_for('ver_datos'))
+
+@app.route('/datos/exportar/csv')
+def exportar_csv():
+    """Exporta productos actuales a CSV"""
+    try:
+        productos = inventario.obtener_todos()
+        with open(CSV_FILE, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(['id', 'nombre', 'precio', 'cantidad', 'categoria', 'descripcion'])
+            for p in productos:
+                writer.writerow([p.id, p.nombre, p.precio, p.cantidad, p.categoria, p.descripcion])
+        flash('Datos exportados a CSV correctamente', 'success')
+    except Exception as e:
+        flash(f'Error exportando a CSV: {str(e)}', 'error')
+    return redirect(url_for('ver_datos'))
+
+@app.route('/datos/exportar/sqlite')
+def exportar_sqlite():
+    """Exporta productos actuales a SQLite"""
+    try:
+        productos = inventario.obtener_todos()
+        for p in productos:
+            guardar_en_sqlite(p.to_dict())
+        flash('Datos exportados a SQLite correctamente', 'success')
+    except Exception as e:
+        flash(f'Error exportando a SQLite: {str(e)}', 'error')
+    return redirect(url_for('ver_datos'))
+
+# ----- MANEJADORES DE ERRORES -----
+@app.errorhandler(404)
+def page_not_found(e):
+    """Página no encontrada"""
+    return render_template('404_producto.html', nombre='página'), 404
+
 if __name__ == '__main__':
     print("=" * 50)
     print("🚀 Servidor iniciado correctamente")
     print("📱 Accede a: http://127.0.0.1:5000")
+    print("📊 Nueva ruta: http://127.0.0.1:5000/datos")
     print("=" * 50)
     app.run(debug=True)

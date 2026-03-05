@@ -1,0 +1,1 @@
+ID,Nombre,Precio,Cantidad,Categoría,Descripción
