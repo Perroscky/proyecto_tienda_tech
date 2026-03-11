@@ -43,9 +43,15 @@ Aplicación web completa que permite:
 - Rutas de gestión: `/datos` para ver y exportar datos entre formatos
 - Funciones: guardar/cargar desde TXT, JSON, CSV y SQLite
 
----
-## 🚀 CÓMO EJECUTAR
+### **Semana 13 - Integración con MySQL** 🔥 NUEVO
+- Configuración de MySQL con WAMP
+- Conexión Flask-MySQL usando PyMySQL
+- Creación de tablas: usuarios, productos, carritos, ventas
+- Operaciones CRUD completas desde la aplicación web
+- Migración de datos desde SQLite a MySQL
+- Rutas específicas: `/mysql`, `/mysql/insertar`, `/mysql/actualizar`, `/mysql/eliminar`
 
+## 🚀 CÓMO EJECUTAR
 
 # 1. Crear entorno virtual
 python -m venv venv
