@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Datos MySQL | Tienda Tech{% endblock %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 0 auto; background: white; padding: 40px; border-radius: 15px;">
+    <h1 style="color: #667eea; margin-bottom: 30px;">🗄️ Datos desde MySQL</h1>
+    
+    <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+        <a href="{{ url_for('test_wamp') }}" style="padding: 10px 20px; background: #3498db; color: white; text-decoration: none; border-radius: 5px;">🔌 Probar Conexión</a>
+        <a href="{{ url_for('insertar_mysql') }}" style="padding: 10px 20px; background: #27ae60; color: white; text-decoration: none; border-radius: 5px;">➕ Insertar Producto</a>
+        <a href="{{ url_for('ver_datos') }}" style="padding: 10px 20px; background: #9b59b6; color: white; text-decoration: none; border-radius: 5px;">📊 Ver Datos Locales</a>
+        <a href="{{ url_for('inicio') }}" style="padding: 10px 20px; background: #95a5a6; color: white; text-decoration: none; border-radius: 5px;">← Volver</a>
+    </div>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div style="padding: 10px; margin: 10px 0; border-radius: 5px; 
+                          background-color: {% if category == 'error' %}#f8d7da{% else %}#d4edda{% endif %}; 
+                          color: {% if category == 'error' %}#721c24{% else %}#155724{% endif %};">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    {% if productos %}
+    <h2 style="color: #764ba2; margin-bottom: 20px;">📦 Productos en MySQL</h2>
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+            <thead>
+                <tr style="background: #667eea; color: white;">
+                    <th style="padding: 10px;">ID</th>
+                    <th style="padding: 10px;">Nombre</th>
+                    <th style="padding: 10px;">Precio</th>
+                    <th style="padding: 10px;">Cantidad</th>
+                    <th style="padding: 10px;">Categoría</th>
+                    <th style="padding: 10px;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in productos %}
+                <tr style="border-bottom: 1px solid #ddd;">
+                    <td style="padding: 10px;">{{ p.id }}</td>
+                    <td style="padding: 10px;">{{ p.nombre }}</td>
+                    <td style="padding: 10px;">${{ "%.2f"|format(p.precio) }}</td>
+                    <td style="padding: 10px;">{{ p.cantidad }}</td>
+                    <td style="padding: 10px;">{{ p.categoria }}</td>
+                    <td style="padding: 10px;">
+                        <form method="POST" action="{{ url_for('actualizar_mysql', id=p.id) }}" style="display: inline;">
+                            <input type="number" name="precio" value="{{ p.precio }}" step="0.01" style="width: 70px; padding: 3px; border: 1px solid #ddd; border-radius: 3px;">
+                            <input type="number" name="cantidad" value="{{ p.cantidad }}" style="width: 50px; padding: 3px; border: 1px solid #ddd; border-radius: 3px;">
+                            <button type="submit" style="background: #f39c12; color: white; border: none; padding: 5px 8px; border-radius: 3px; cursor: pointer;">↻</button>
+                        </form>
+                        <a href="{{ url_for('eliminar_mysql', id=p.id) }}" style="background: #e74c3c; color: white; padding: 5px 8px; text-decoration: none; border-radius: 3px; margin-left: 5px; display: inline-block;">✖</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 60px 20px;">
+        <p style="color: #666; font-size: 1.2em; margin-bottom: 20px;">No hay productos en MySQL</p>
+        <a href="{{ url_for('insertar_mysql') }}" style="display: inline-block; padding: 12px 30px; background: #27ae60; color: white; text-decoration: none; border-radius: 5px;">Agregar Primer Producto</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
