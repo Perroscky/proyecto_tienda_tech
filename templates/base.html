@@ -14,34 +14,34 @@
         </header>
         
         <nav class="navbar">
-    <a href="{{ url_for('inicio') }}">Inicio</a>
-    <a href="{{ url_for('categoria', tipo='computadoras') }}">Computadoras</a>
-    <a href="{{ url_for('categoria', tipo='perifericos') }}">Periféricos</a>
-    <a href="{{ url_for('categoria', tipo='audio') }}">Audio</a>
-    <a href="{{ url_for('contacto') }}">Contacto</a>
-    <a href="{{ url_for('about') }}">Acerca de</a>
-    <a href="{{ url_for('ver_datos') }}">📊 Datos</a> 
-    <a href="{{ url_for('ver_mysql') }}">🗄️ MySQL</a>
-
-    {% if session.usuario_id %}
-        <a href="{{ url_for('logout') }}">🚪 Cerrar Sesión ({{ session.usuario_nombre }})</a>
-    {% else %}
-        <a href="{{ url_for('login') }}">🔐 Iniciar Sesión</a>
-        <a href="{{ url_for('registro') }}">📝 Registrarse</a>
-    {% endif %}
-    
-    <a href="{{ url_for('ver_carrito') }}">🛒 Carrito 
-        {% if session.carrito and session.carrito.cantidad_items %}
-            ({{ session.carrito.cantidad_items }})
-        {% endif %}
-    </a>
-</nav>
+            <a href="{{ url_for('inicio') }}">Inicio</a>
+            <a href="{{ url_for('categoria', tipo='computadoras') }}">Computadoras</a>
+            <a href="{{ url_for('categoria', tipo='perifericos') }}">Periféricos</a>
+            <a href="{{ url_for('categoria', tipo='audio') }}">Audio</a>
+            <a href="{{ url_for('contacto') }}">Contacto</a>
+            <a href="{{ url_for('about') }}">Acerca de</a>
+            
+            {% if session.usuario_id %}
+                <a href="{{ url_for('logout') }}">🚪 Cerrar Sesión ({{ session.usuario_nombre }})</a>
+            {% else %}
+                <a href="{{ url_for('login') }}">🔐 Iniciar Sesión</a>
+                <a href="{{ url_for('registro') }}">📝 Registrarse</a>
+            {% endif %}
+            
+            <a href="{{ url_for('ver_carrito') }}">🛒 Carrito 
+                {% if session.carrito and session.carrito.cantidad_items %}
+                    ({{ session.carrito.cantidad_items }})
+                {% endif %}
+            </a>
+        </nav>
         
         <main>
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     {% for category, message in messages %}
-                        <div class="alert alert-{{ category }}">
+                        <div style="padding: 10px; margin: 10px 0; border-radius: 5px; 
+                                  background-color: {% if category == 'error' %}#f8d7da{% else %}#d4edda{% endif %}; 
+                                  color: {% if category == 'error' %}#721c24{% else %}#155724{% endif %};">
                             {{ message }}
                         </div>
                     {% endfor %}

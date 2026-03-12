@@ -3,52 +3,74 @@
 {% block title %}Carrito de Compras | Tienda Tech{% endblock %}
 
 {% block content %}
-<div class="carrito-container">
-    <h1>🛒 Carrito de Compras</h1>
+<div style="max-width: 800px; margin: 50px auto; background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+    <h1 style="color: #667eea; margin-bottom: 30px;">🛒 Carrito de Compras</h1>
     
+    <!-- Mensajes flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div style="padding: 10px; margin: 10px 0; border-radius: 5px; 
+                          background-color: {% if category == 'error' %}#f8d7da{% else %}#d4edda{% endif %}; 
+                          color: {% if category == 'error' %}#721c24{% else %}#155724{% endif %};">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <!-- Verificar si el carrito tiene items -->
     {% if carrito and carrito.items %}
-        <div class="carrito-items">
+        <!-- Lista de productos - CORREGIDO: iteración correcta -->
+        <div style="margin-bottom: 20px;">
             {% for producto_id, item in carrito.items.items() %}
-            <div class="carrito-item">
-                <div class="item-info">
-                    <h3>{{ item.nombre }}</h3>
-                    <p>Precio unitario: ${{ "%.2f"|format(item.precio) }}</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #eee;">
+                <div style="flex: 2;">
+                    <h3 style="color: #333; margin-bottom: 5px;">{{ item.nombre }}</h3>
+                    <p style="color: #666;">Precio unitario: ${{ "%.2f"|format(item.precio) }}</p>
                 </div>
                 
-                <div class="item-cantidad">
-                    <form method="POST" action="{{ url_for('actualizar_carrito', producto_id=item.producto_id) }}">
-                        <input type="number" name="cantidad" value="{{ item.cantidad }}" min="0">
-                        <button type="submit" class="btn-actualizar">↻</button>
+                <div style="flex: 1; text-align: center;">
+                    <form method="POST" action="{{ url_for('actualizar_carrito', producto_id=item.producto_id) }}" style="display: inline;">
+                        <input type="number" name="cantidad" value="{{ item.cantidad }}" min="0" style="width: 60px; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
+                        <button type="submit" style="background: #667eea; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">↻</button>
                     </form>
                 </div>
                 
-                <div class="item-subtotal">
-                    <p class="subtotal">${{ "%.2f"|format(item.subtotal) }}</p>
-                    <a href="{{ url_for('eliminar_del_carrito', producto_id=item.producto_id) }}" class="btn-eliminar">✖</a>
+                <div style="flex: 1; text-align: right;">
+                    <p style="font-weight: bold; color: #764ba2;">${{ "%.2f"|format(item.subtotal) }}</p>
+                    <a href="{{ url_for('eliminar_del_carrito', producto_id=item.producto_id) }}" style="color: #e74c3c; text-decoration: none;">✖ Eliminar</a>
                 </div>
             </div>
             {% endfor %}
         </div>
         
-        <div class="carrito-total">
-            <h2>Total: ${{ "%.2f"|format(carrito.total) }}</h2>
-            <p>{{ carrito.cantidad_items }} artículos</p>
+        <!-- Total y botones -->
+        <div style="border-top: 2px solid #333; padding: 20px 0; text-align: right;">
+            <h2 style="color: #333; margin-bottom: 10px;">Total: ${{ "%.2f"|format(carrito.total) }}</h2>
+            <p style="color: #666; margin-bottom: 20px;">{{ carrito.cantidad_items }} artículos</p>
             
-            <div class="carrito-acciones">
-                <a href="{{ url_for('inicio') }}" class="btn-secondary">← Seguir Comprando</a>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <a href="{{ url_for('inicio') }}" style="display: inline-block; padding: 12px 30px; background: #95a5a6; color: white; text-decoration: none; border-radius: 5px;">← Seguir Comprando</a>
                 
                 {% if session.usuario_id %}
-                <a href="{{ url_for('finalizar_compra') }}" class="btn-primary">Finalizar Compra ✓</a>
+                <a href="{{ url_for('finalizar_compra') }}" style="display: inline-block; padding: 12px 30px; background: #27ae60; color: white; text-decoration: none; border-radius: 5px;">Finalizar Compra ✓</a>
                 {% else %}
-                <a href="{{ url_for('login') }}" class="btn-primary">Inicia sesión para comprar</a>
+                <a href="{{ url_for('login') }}" style="display: inline-block; padding: 12px 30px; background: #27ae60; color: white; text-decoration: none; border-radius: 5px;">Inicia sesión para comprar</a>
                 {% endif %}
             </div>
         </div>
     {% else %}
-        <div class="carrito-vacio">
-            <p>Tu carrito está vacío</p>
-            <a href="{{ url_for('inicio') }}" class="btn-primary">Ver Productos</a>
+        <!-- Carrito vacío -->
+        <div style="text-align: center; padding: 60px 20px;">
+            <p style="font-size: 1.2em; color: #666; margin-bottom: 20px;">Tu carrito está vacío</p>
+            <a href="{{ url_for('inicio') }}" style="display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px;">Ver Productos</a>
         </div>
     {% endif %}
 </div>
+
+<!-- Script para depuración (opcional, puedes eliminarlo después) -->
+<script>
+    console.log("Carrito en sesión:", {{ session.get('carrito', {})|tojson|safe }});
+</script>
 {% endblock %}

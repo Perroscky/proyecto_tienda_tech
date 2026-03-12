@@ -194,11 +194,11 @@ class DatabaseManager:
                 INSERT INTO usuarios (nombre, email, password, fecha_nacimiento, proveedor)
                 VALUES (?, ?, ?, ?, ?)
             ''', (
-                usuario.nombre,
-                usuario.email,
-                usuario._password,
-                usuario._fecha_nacimiento if isinstance(usuario._fecha_nacimiento, str) 
-                    else usuario._fecha_nacimiento.strftime("%Y-%m-%d"),
+                usuario.nombre,                    # 🔥 CORREGIDO: usuario.nombre (sin _)
+                usuario.email,                      # 🔥 CORREGIDO: usuario.email (sin _)
+                usuario.password,                    # 🔥 CORREGIDO: usuario.password (sin _)
+                usuario.fecha_nacimiento if isinstance(usuario.fecha_nacimiento, str) 
+                    else usuario.fecha_nacimiento.strftime("%Y-%m-%d"),
                 usuario.proveedor
             ))
             conn.commit()
