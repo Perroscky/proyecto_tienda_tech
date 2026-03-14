@@ -20,30 +20,28 @@
     {% endwith %}
     
     <!-- Verificar si el carrito tiene items -->
-    {% if carrito and carrito.items %}
-        <!-- Lista de productos - CORREGIDO: iteración correcta -->
-        <div style="margin-bottom: 20px;">
-            {% for producto_id, item in carrito.items.items() %}
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #eee;">
-                <div style="flex: 2;">
-                    <h3 style="color: #333; margin-bottom: 5px;">{{ item.nombre }}</h3>
-                    <p style="color: #666;">Precio unitario: ${{ "%.2f"|format(item.precio) }}</p>
-                </div>
-                
-                <div style="flex: 1; text-align: center;">
-                    <form method="POST" action="{{ url_for('actualizar_carrito', producto_id=item.producto_id) }}" style="display: inline;">
-                        <input type="number" name="cantidad" value="{{ item.cantidad }}" min="0" style="width: 60px; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
-                        <button type="submit" style="background: #667eea; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">↻</button>
-                    </form>
-                </div>
-                
-                <div style="flex: 1; text-align: right;">
-                    <p style="font-weight: bold; color: #764ba2;">${{ "%.2f"|format(item.subtotal) }}</p>
-                    <a href="{{ url_for('eliminar_del_carrito', producto_id=item.producto_id) }}" style="color: #e74c3c; text-decoration: none;">✖ Eliminar</a>
-                </div>
+    {% if carrito and carrito.get('items') %}
+        <!-- Lista de productos -->
+        {% for producto_id, item in carrito['items'].items() %}
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #eee;">
+            <div style="flex: 2;">
+                <h3 style="color: #333; margin-bottom: 5px;">{{ item.nombre }}</h3>
+                <p style="color: #666;">Precio unitario: ${{ "%.2f"|format(item.precio) }}</p>
             </div>
-            {% endfor %}
+            
+            <div style="flex: 1; text-align: center;">
+                <form method="POST" action="{{ url_for('actualizar_carrito', producto_id=item.producto_id) }}" style="display: inline;">
+                    <input type="number" name="cantidad" value="{{ item.cantidad }}" min="0" style="width: 60px; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
+                    <button type="submit" style="background: #667eea; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">↻</button>
+                </form>
+            </div>
+            
+            <div style="flex: 1; text-align: right;">
+                <p style="font-weight: bold; color: #764ba2;">${{ "%.2f"|format(item.subtotal) }}</p>
+                <a href="{{ url_for('eliminar_del_carrito', producto_id=item.producto_id) }}" style="color: #e74c3c; text-decoration: none;">✖ Eliminar</a>
+            </div>
         </div>
+        {% endfor %}
         
         <!-- Total y botones -->
         <div style="border-top: 2px solid #333; padding: 20px 0; text-align: right;">
@@ -68,9 +66,4 @@
         </div>
     {% endif %}
 </div>
-
-<!-- Script para depuración (opcional, puedes eliminarlo después) -->
-<script>
-    console.log("Carrito en sesión:", {{ session.get('carrito', {})|tojson|safe }});
-</script>
 {% endblock %}
