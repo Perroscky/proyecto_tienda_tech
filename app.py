@@ -1,4 +1,4 @@
-# app.py - VERSIÓN COMPLETA Y CORREGIDA
+# app.py - VERSIÓN COMPLETA CON FUNCIÓN MYSQL ACTUALIZADA
 
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from models.inventario import Inventario
@@ -109,25 +109,31 @@ def cargar_desde_csv():
         print(f"Error cargando CSV: {e}")
     return productos
 
-# ----- FUNCIONES PARA MYSQL (Semana 13) -----
+# ----- FUNCIÓN ACTUALIZADA PARA CONECTAR A MYSQL -----
 def conectar_mysql():
+    """
+    Función para conectar a MySQL (Clever Cloud o Local)
+    Usa la clase MySQLConnection actualizada
+    """
     try:
-        import pymysql
-        connection = pymysql.connect(
-            host='localhost',
-            user='root',
-            password='123456',
-            database='proyecto_tienda_tech',
-            port=3306,
-            charset='utf8mb4',
-            cursorclass=pymysql.cursors.DictCursor
-        )
-        return connection
-    except ImportError:
-        print("❌ pymysql no instalado. Ejecuta: pip install pymysql")
+        from database.conexion import MySQLConnection
+        db = MySQLConnection()
+        conn = db.conectar()
+        
+        if conn:
+            print("✅ Conexión MySQL establecida correctamente")
+            return conn
+        else:
+            print("❌ No se pudo establecer la conexión MySQL")
+            return None
+            
+    except ImportError as e:
+        print(f"❌ Error importando MySQLConnection: {e}")
+        print("   Verifica que el archivo database/conexion.py existe")
         return None
+        
     except Exception as e:
-        print(f"❌ Error conectando a MySQL: {e}")
+        print(f"❌ Error inesperado: {e}")
         return None
 
 # ----- RUTAS PÚBLICAS (Semanas 9-10) -----
@@ -218,14 +224,15 @@ def registro():
                             cursor.execute("SHOW TABLES LIKE 'usuarios'")
                             if cursor.fetchone():
                                 sql = """INSERT INTO usuarios 
-                                         (nombre, mail, password, fecha_nacimiento, proveedor) 
-                                         VALUES (%s, %s, %s, %s, %s)"""
+                                         (nombre, mail, password, fecha_nacimiento, proveedor, rol) 
+                                         VALUES (%s, %s, %s, %s, %s, %s)"""
                                 cursor.execute(sql, (
                                     usuario.nombre,
                                     usuario.email,
                                     usuario.password,
                                     usuario.fecha_nacimiento,
-                                    usuario.proveedor
+                                    usuario.proveedor,
+                                    'cliente'
                                 ))
                                 conn.commit()
                                 print("✅ Usuario también guardado en MySQL")
@@ -272,10 +279,9 @@ def logout():
     flash('Sesión cerrada correctamente', 'success')
     return redirect(url_for('inicio'))
 
-# ----- RUTAS DEL CARRITO (Semana 11) - CORREGIDAS -----
+# ----- RUTAS DEL CARRITO (Semana 11) -----
 @app.route('/agregar_al_carrito/<int:producto_id>')
 def agregar_al_carrito(producto_id):
-    """Agrega un producto al carrito"""
     producto = inventario.obtener_producto_por_id(producto_id)
     
     if not producto:
@@ -317,16 +323,12 @@ def agregar_al_carrito(producto_id):
 
 @app.route('/carrito')
 def ver_carrito():
-    """Ver el contenido del carrito"""
     if 'carrito' not in session:
         session['carrito'] = {'items': {}, 'total': 0, 'cantidad_items': 0}
-    
-    carrito_data = session['carrito']
-    return render_template('carrito.html', carrito=carrito_data)
+    return render_template('carrito.html', carrito=session['carrito'])
 
 @app.route('/actualizar_carrito/<int:producto_id>', methods=['POST'])
 def actualizar_carrito(producto_id):
-    """Actualizar cantidad de un producto en el carrito"""
     cantidad = int(request.form.get('cantidad', 0))
     
     if 'carrito' in session:
@@ -356,7 +358,6 @@ def actualizar_carrito(producto_id):
 
 @app.route('/eliminar_del_carrito/<int:producto_id>')
 def eliminar_del_carrito(producto_id):
-    """Eliminar un producto del carrito"""
     if 'carrito' in session:
         carrito = session['carrito']
         pid = str(producto_id)
@@ -555,6 +556,36 @@ def eliminar_mysql(id):
         flash(f'Error: {str(e)}', 'error')
     return redirect(url_for('ver_mysql'))
 
+# ----- RUTA DE PRUEBA PARA VERIFICAR CONEXIÓN -----
+@app.route('/test-db')
+def test_db():
+    """Ruta para verificar qué base de datos se está usando"""
+    try:
+        from database.conexion import MySQLConnection
+        db = MySQLConnection()
+        conn = db.conectar()
+        
+        if conn:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT DATABASE() as db, VERSION() as version, USER() as user")
+                info = cursor.fetchone()
+            conn.close()
+            
+            return f"""
+            <div style="padding:20px; font-family:Arial; max-width:600px; margin:50px auto; background:white; border-radius:15px;">
+                <h2 style="color:#667eea;">🔍 Información de Base de Datos</h2>
+                <p><strong>Modo:</strong> {"PRODUCCIÓN (Clever Cloud)" if os.environ.get('RENDER') else "DESARROLLO (Local)"}</p>
+                <p><strong>Base de datos:</strong> {info['db']}</p>
+                <p><strong>Usuario:</strong> {info['user']}</p>
+                <p><strong>Versión MySQL:</strong> {info['version']}</p>
+                <p><a href="/" style="color:#667eea;">← Volver a inicio</a></p>
+            </div>
+            """
+        else:
+            return "<h2>❌ No conectado a MySQL</h2>"
+    except Exception as e:
+        return f"<h2>❌ Error: {str(e)}</h2>"
+
 # ----- MANEJADORES DE ERRORES -----
 @app.errorhandler(404)
 def page_not_found(e):
@@ -566,5 +597,6 @@ if __name__ == '__main__':
     print("📱 Accede a: http://127.0.0.1:5000")
     print("📊 Semana 12: http://127.0.0.1:5000/datos")
     print("🗄️ Semana 13: http://127.0.0.1:5000/mysql")
+    print("🔍 Test DB: http://127.0.0.1:5000/test-db")
     print("=" * 50)
     app.run(debug=True)
