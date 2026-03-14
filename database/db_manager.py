@@ -1,3 +1,5 @@
+# database/db_manager.py
+
 import sqlite3
 import os
 
@@ -14,6 +16,8 @@ class DatabaseManager:
         # Obtener la ruta absoluta para la base de datos
         self.db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), db_name)
         self.crear_tablas()
+        self.crear_tabla_usuarios()
+        self.crear_tabla_carrito()
     
     def get_connection(self):
         """
@@ -49,123 +53,6 @@ class DatabaseManager:
             conn.commit()
             print("✅ Tabla de productos creada/verificada correctamente")
     
-    # ----- MÉTODOS PARA PRODUCTOS (CRUD) -----
-    
-    def insertar_producto(self, producto):
-        """
-        Inserta un nuevo producto en la base de datos
-        """
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO productos (id, nombre, precio, cantidad, categoria, descripcion)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (
-                producto.id,
-                producto.nombre,
-                producto.precio,
-                producto.cantidad,
-                producto.categoria,
-                producto.descripcion
-            ))
-            conn.commit()
-            return cursor.lastrowid
-    
-    def obtener_todos_productos(self):
-        """
-        Obtiene todos los productos de la base de datos
-        """
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT * FROM productos ORDER BY id')
-            return cursor.fetchall()
-    
-    def obtener_producto_por_id(self, id):
-        """
-        Obtiene un producto por su ID
-        """
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT * FROM productos WHERE id = ?', (id,))
-            return cursor.fetchone()
-    
-    def obtener_productos_por_nombre(self, nombre):
-        """
-        Busca productos por nombre (búsqueda parcial)
-        """
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT * FROM productos WHERE nombre LIKE ?', (f'%{nombre}%',))
-            return cursor.fetchall()
-    
-    def obtener_productos_por_categoria(self, categoria):
-        """
-        Obtiene productos por categoría
-        """
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT * FROM productos WHERE categoria = ?', (categoria,))
-            return cursor.fetchall()
-    
-    def actualizar_producto(self, id, nombre=None, precio=None, cantidad=None, 
-                           categoria=None, descripcion=None):
-        """
-        Actualiza los datos de un producto
-        """
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            
-            # Construir la consulta dinámicamente
-            updates = []
-            valores = []
-            
-            if nombre is not None:
-                updates.append("nombre = ?")
-                valores.append(nombre)
-            if precio is not None:
-                updates.append("precio = ?")
-                valores.append(precio)
-            if cantidad is not None:
-                updates.append("cantidad = ?")
-                valores.append(cantidad)
-            if categoria is not None:
-                updates.append("categoria = ?")
-                valores.append(categoria)
-            if descripcion is not None:
-                updates.append("descripcion = ?")
-                valores.append(descripcion)
-            
-            if not updates:
-                return False
-            
-            valores.append(id)
-            query = f"UPDATE productos SET {', '.join(updates)} WHERE id = ?"
-            
-            cursor.execute(query, valores)
-            conn.commit()
-            return cursor.rowcount > 0
-    
-    def eliminar_producto(self, id):
-        """
-        Elimina un producto por su ID
-        """
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('DELETE FROM productos WHERE id = ?', (id,))
-            conn.commit()
-            return cursor.rowcount > 0
-    
-    def producto_existe(self, id):
-        """
-        Verifica si un producto existe en la base de datos
-        """
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT 1 FROM productos WHERE id = ?', (id,))
-            return cursor.fetchone() is not None
-    
-    # ----- MÉTODOS PARA USUARIOS -----
-    
     def crear_tabla_usuarios(self):
         """Crea la tabla de usuarios en la base de datos"""
         with self.get_connection() as conn:
@@ -183,46 +70,6 @@ class DatabaseManager:
             ''')
             conn.commit()
             print("✅ Tabla 'usuarios' creada/verificada")
-    
-    def insertar_usuario(self, usuario):
-        """
-        Inserta un nuevo usuario en la base de datos
-        """
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO usuarios (nombre, email, password, fecha_nacimiento, proveedor)
-                VALUES (?, ?, ?, ?, ?)
-            ''', (
-                usuario.nombre,                    # 🔥 CORREGIDO: usuario.nombre (sin _)
-                usuario.email,                      # 🔥 CORREGIDO: usuario.email (sin _)
-                usuario.password,                    # 🔥 CORREGIDO: usuario.password (sin _)
-                usuario.fecha_nacimiento if isinstance(usuario.fecha_nacimiento, str) 
-                    else usuario.fecha_nacimiento.strftime("%Y-%m-%d"),
-                usuario.proveedor
-            ))
-            conn.commit()
-            return cursor.lastrowid
-    
-    def obtener_usuario_por_email(self, email):
-        """
-        Obtiene un usuario por su email
-        """
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT * FROM usuarios WHERE email = ?', (email,))
-            return cursor.fetchone()
-    
-    def obtener_usuario_por_id(self, id):
-        """
-        Obtiene un usuario por su ID
-        """
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT * FROM usuarios WHERE id = ?', (id,))
-            return cursor.fetchone()
-    
-    # ----- MÉTODOS PARA CARRITO -----
     
     def crear_tabla_carrito(self):
         """Crea las tablas relacionadas con el carrito"""
@@ -257,10 +104,79 @@ class DatabaseManager:
             conn.commit()
             print("✅ Tablas de carrito creadas/verificadas")
     
+    # ----- MÉTODOS PARA PRODUCTOS -----
+    def insertar_producto(self, producto):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO productos (id, nombre, precio, cantidad, categoria, descripcion)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (
+                producto.id,
+                producto.nombre,
+                producto.precio,
+                producto.cantidad,
+                producto.categoria,
+                producto.descripcion
+            ))
+            conn.commit()
+            return cursor.lastrowid
+    
+    def obtener_todos_productos(self):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM productos ORDER BY id')
+            return cursor.fetchall()
+    
+    def obtener_producto_por_id(self, id):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM productos WHERE id = ?', (id,))
+            return cursor.fetchone()
+    
+    def obtener_productos_por_nombre(self, nombre):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM productos WHERE nombre LIKE ?', (f'%{nombre}%',))
+            return cursor.fetchall()
+    
+    def obtener_productos_por_categoria(self, categoria):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM productos WHERE categoria = ?', (categoria,))
+            return cursor.fetchall()
+    
+    # ----- MÉTODOS PARA USUARIOS -----
+    def insertar_usuario(self, usuario):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO usuarios (nombre, email, password, fecha_nacimiento, proveedor)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (
+                usuario.nombre,
+                usuario.email,
+                usuario.password,
+                usuario.fecha_nacimiento if isinstance(usuario.fecha_nacimiento, str) 
+                    else usuario.fecha_nacimiento.strftime("%Y-%m-%d"),
+                usuario.proveedor
+            ))
+            conn.commit()
+            return cursor.lastrowid
+    
+    def obtener_usuario_por_email(self, email):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM usuarios WHERE email = ?', (email,))
+            return cursor.fetchone()
+    
+    def obtener_usuario_por_id(self, id):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM usuarios WHERE id = ?', (id,))
+            return cursor.fetchone()
+    
     def crear_carrito(self, usuario_id=None):
-        """
-        Crea un nuevo carrito para un usuario
-        """
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
@@ -269,157 +185,3 @@ class DatabaseManager:
             ''', (usuario_id,))
             conn.commit()
             return cursor.lastrowid
-    
-    def obtener_carrito_activo(self, usuario_id):
-        """
-        Obtiene el carrito activo de un usuario
-        """
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                SELECT * FROM carritos 
-                WHERE usuario_id = ? AND estado = 'activo'
-                ORDER BY fecha_creacion DESC LIMIT 1
-            ''', (usuario_id,))
-            return cursor.fetchone()
-    
-    def agregar_item_carrito(self, carrito_id, producto_id, cantidad, precio):
-        """
-        Agrega un item al carrito
-        """
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO carrito_items (carrito_id, producto_id, cantidad, precio_unitario)
-                VALUES (?, ?, ?, ?)
-            ''', (carrito_id, producto_id, cantidad, precio))
-            conn.commit()
-            return cursor.lastrowid
-    
-    def obtener_items_carrito(self, carrito_id):
-        """
-        Obtiene los items de un carrito
-        """
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                SELECT ci.*, p.nombre, p.descripcion 
-                FROM carrito_items ci
-                JOIN productos p ON ci.producto_id = p.id
-                WHERE ci.carrito_id = ?
-            ''', (carrito_id,))
-            return cursor.fetchall()
-    
-    def vaciar_carrito(self, carrito_id):
-        """
-        Vacía un carrito
-        """
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('DELETE FROM carrito_items WHERE carrito_id = ?', (carrito_id,))
-            conn.commit()
-            return cursor.rowcount
-    
-    def finalizar_compra(self, carrito_id, usuario_id, total):
-        """
-        Finaliza una compra (crea venta y actualiza stock)
-        """
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            
-            # Crear venta
-            cursor.execute('''
-                INSERT INTO ventas (usuario_id, total)
-                VALUES (?, ?)
-            ''', (usuario_id, total))
-            venta_id = cursor.lastrowid
-            
-            # Obtener items del carrito
-            items = self.obtener_items_carrito(carrito_id)
-            
-            # Insertar detalles y actualizar stock
-            for item in items:
-                # Insertar detalle
-                cursor.execute('''
-                    INSERT INTO venta_detalles (venta_id, producto_id, cantidad, precio_unitario, subtotal)
-                    VALUES (?, ?, ?, ?, ?)
-                ''', (venta_id, item[2], item[3], item[4], item[3] * item[4]))
-                
-                # Actualizar stock
-                cursor.execute('''
-                    UPDATE productos 
-                    SET cantidad = cantidad - ? 
-                    WHERE id = ?
-                ''', (item[3], item[2]))
-            
-            # Marcar carrito como completado
-            cursor.execute('''
-                UPDATE carritos SET estado = 'completado' WHERE id = ?
-            ''', (carrito_id,))
-            
-            conn.commit()
-            return venta_id
-    
-    # ----- MÉTODO PARA MIGRACIÓN DE DATOS INICIALES -----
-    
-    def migrar_productos_iniciales(self):
-        """
-        Migra los productos del diccionario actual a la base de datos
-        """
-        try:
-            from app import productos_db
-        except ImportError:
-            print("No se pudieron importar los productos iniciales")
-            return 0
-        
-        productos_migrados = 0
-        for key, data in productos_db.items():
-            try:
-                # Extraer el precio (eliminar $ y comas)
-                precio_str = data['precio'].replace('$', '').replace(',', '')
-                precio = float(precio_str)
-                
-                # Determinar categoría basado en el key
-                categoria = self.determinar_categoria(key)
-                
-                # Determinar cantidad basado en el stock
-                cantidad = 10 if data['stock'] == 'Disponible' else 3
-                
-                # Generar un ID numérico (usando hash)
-                id_temp = abs(hash(key)) % 10000
-                
-                with self.get_connection() as conn:
-                    cursor = conn.cursor()
-                    cursor.execute('''
-                        INSERT OR IGNORE INTO productos (id, nombre, precio, cantidad, categoria, descripcion)
-                        VALUES (?, ?, ?, ?, ?, ?)
-                    ''', (
-                        id_temp,
-                        data['nombre'],
-                        precio,
-                        cantidad,
-                        categoria,
-                        data.get('descripcion', '')
-                    ))
-                    conn.commit()
-                    if cursor.rowcount > 0:
-                        productos_migrados += 1
-            except Exception as e:
-                print(f"Error migrando {key}: {e}")
-        
-        print(f"✅ {productos_migrados} productos migrados a la base de datos")
-        return productos_migrados
-    
-    def determinar_categoria(self, key):
-        """
-        Determina la categoría basada en el key del producto
-        """
-        categorias_map = {
-            'laptop': 'computadoras',
-            'mouse': 'perifericos',
-            'teclado': 'perifericos',
-            'monitor': 'computadoras',
-            'audifonos': 'audio',
-            'webcam': 'perifericos'
-        }
-        return categorias_map.get(key, 'otros')
