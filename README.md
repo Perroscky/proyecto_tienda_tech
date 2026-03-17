@@ -43,13 +43,22 @@ Aplicación web completa que permite:
 - Rutas de gestión: `/datos` para ver y exportar datos entre formatos
 - Funciones: guardar/cargar desde TXT, JSON, CSV y SQLite
 
-### **Semana 13 - Integración con MySQL** 🔥 NUEVO
+### **Semana 13 - Integración con MySQL**
 - Configuración de MySQL con WAMP
 - Conexión Flask-MySQL usando PyMySQL
 - Creación de tablas: usuarios, productos, carritos, ventas
 - Operaciones CRUD completas desde la aplicación web
 - Migración de datos desde SQLite a MySQL
 - Rutas específicas: `/mysql`, `/mysql/insertar`, `/mysql/actualizar`, `/mysql/eliminar`
+
+### **Semana 14 - Sistema de autenticación con Flask-Login** 
+- Implementación de **Flask-Login** para manejo de sesiones
+- Protección de rutas con `@login_required`
+- Mejora en el manejo de sesiones de usuario
+- Migración de base de datos MySQL a **Clever Cloud** (nube)
+- Conexión exitosa entre Render y Clever Cloud
+- Datos sincronizados: 8 productos y 5 usuarios en la nube
+- Rutas protegidas: `/datos`, `/mysql`, `/carrito` y todas las de gestión
 
 ## 🚀 CÓMO EJECUTAR
 
