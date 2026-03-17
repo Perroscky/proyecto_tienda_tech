@@ -1,6 +1,8 @@
-# app.py - VERSIÓN COMPLETA CON FUNCIÓN MYSQL ACTUALIZADA
+# app.py - VERSIÓN COMPLETA CON FLASK-LOGIN
+# TODAS las funcionalidades anteriores se mantienen
 
 from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from models.inventario import Inventario
 from models.usuario import Usuario
 from database.db_manager import DatabaseManager
@@ -12,6 +14,13 @@ from datetime import datetime
 app = Flask(__name__)
 app.secret_key = 'clave_secreta_proyecto_tienda_tech'
 
+# Configuración de Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'  # Ruta para login
+login_manager.login_message = 'Por favor inicia sesión para acceder a esta página'
+login_manager.login_message_category = 'info'
+
 # Configuración de archivos (Semana 12)
 DATA_FOLDER = 'data'
 TXT_FILE = os.path.join(DATA_FOLDER, 'productos.txt')
@@ -22,6 +31,24 @@ os.makedirs(DATA_FOLDER, exist_ok=True)
 # Inicializar componentes
 inventario = Inventario()
 db = DatabaseManager()
+
+@login_manager.user_loader
+def load_user(user_id):
+    """Carga un usuario desde la base de datos por su ID"""
+    try:
+        # Buscar en SQLite
+        usuario_data = db.obtener_usuario_por_id(int(user_id))
+        if usuario_data:
+            return Usuario(
+                id=usuario_data[0],
+                nombre=usuario_data[1],
+                email=usuario_data[2],
+                password=usuario_data[3],
+                fecha_nacimiento=usuario_data[4]
+            )
+    except Exception as e:
+        print(f"Error cargando usuario: {e}")
+    return None
 
 # ----- FUNCIONES PARA ARCHIVOS (Semana 12) -----
 def guardar_en_txt(producto):
@@ -109,36 +136,25 @@ def cargar_desde_csv():
         print(f"Error cargando CSV: {e}")
     return productos
 
-# ----- FUNCIÓN ACTUALIZADA PARA CONECTAR A MYSQL -----
+# ----- FUNCIONES PARA MYSQL (Semana 13) -----
 def conectar_mysql():
-    """
-    Función para conectar a MySQL (Clever Cloud o Local)
-    Usa la clase MySQLConnection actualizada
-    """
+    """Conecta a MySQL (Clever Cloud o Local)"""
     try:
         from database.conexion import MySQLConnection
-        db = MySQLConnection()
-        conn = db.conectar()
-        
-        if conn:
-            print("✅ Conexión MySQL establecida correctamente")
-            return conn
-        else:
-            print("❌ No se pudo establecer la conexión MySQL")
-            return None
-            
-    except ImportError as e:
-        print(f"❌ Error importando MySQLConnection: {e}")
-        print("   Verifica que el archivo database/conexion.py existe")
+        db_mysql = MySQLConnection()
+        conn = db_mysql.conectar()
+        return conn
+    except ImportError:
+        print("❌ Error importando MySQLConnection")
         return None
-        
     except Exception as e:
-        print(f"❌ Error inesperado: {e}")
+        print(f"❌ Error conectando a MySQL: {e}")
         return None
 
 # ----- RUTAS PÚBLICAS (Semanas 9-10) -----
 @app.route('/')
 def inicio():
+    """Página principal - Catálogo de productos"""
     productos = inventario.obtener_todos()
     productos_template = {}
     for prod in productos:
@@ -155,6 +171,7 @@ def inicio():
 
 @app.route('/producto/<nombre>')
 def producto(nombre):
+    """Ver detalle de un producto"""
     nombre_lower = nombre.lower().replace('_', ' ')
     productos_encontrados = inventario.buscar_productos(nombre_lower)
     if productos_encontrados:
@@ -173,6 +190,7 @@ def producto(nombre):
 
 @app.route('/categoria/<tipo>')
 def categoria(tipo):
+    """Ver productos por categoría"""
     categorias_validas = Inventario.CATEGORIAS_VALIDAS
     tipo_lower = tipo.lower()
     if tipo_lower in categorias_validas:
@@ -190,9 +208,10 @@ def contacto():
 def about():
     return render_template('about.html')
 
-# ----- RUTAS DE AUTENTICACIÓN (Semana 11) -----
+# ----- RUTAS DE AUTENTICACIÓN (Semana 14 - CON FLASK-LOGIN) -----
 @app.route('/registro', methods=['GET', 'POST'])
 def registro():
+    """Registro de nuevos usuarios - CON FLASK-LOGIN"""
     if request.method == 'POST':
         try:
             nombre = request.form.get('nombre', '').strip()
@@ -212,11 +231,12 @@ def registro():
                 flash('Este email ya está registrado', 'error')
                 return render_template('registro.html')
             
+            # Crear usuario
             usuario = Usuario(None, nombre, email, password, fecha)
             usuario_id = db.insertar_usuario(usuario)
             
             if usuario_id:
-                # Guardar también en MySQL
+                # Guardar también en MySQL (Clever Cloud)
                 try:
                     conn = conectar_mysql()
                     if conn:
@@ -224,37 +244,42 @@ def registro():
                             cursor.execute("SHOW TABLES LIKE 'usuarios'")
                             if cursor.fetchone():
                                 sql = """INSERT INTO usuarios 
-                                         (nombre, mail, password, fecha_nacimiento, proveedor, rol) 
+                                         (id_usuario, nombre, mail, password, fecha_nacimiento, proveedor) 
                                          VALUES (%s, %s, %s, %s, %s, %s)"""
                                 cursor.execute(sql, (
+                                    usuario_id,
                                     usuario.nombre,
                                     usuario.email,
                                     usuario.password,
                                     usuario.fecha_nacimiento,
-                                    usuario.proveedor,
-                                    'cliente'
+                                    usuario.proveedor
                                 ))
                                 conn.commit()
-                                print("✅ Usuario también guardado en MySQL")
+                                print("✅ Usuario guardado en MySQL")
                         conn.close()
                 except Exception as e:
                     print(f"⚠️ Error guardando en MySQL: {e}")
                 
-                session['usuario_id'] = usuario_id
-                session['usuario_nombre'] = usuario.nombre
-                session['usuario_email'] = usuario.email
+                # 🔥 Iniciar sesión con Flask-Login
+                usuario.id = usuario_id
+                login_user(usuario)
+                
                 flash(f'¡Bienvenido {usuario.nombre}!', 'success')
                 return redirect(url_for('inicio'))
             else:
                 flash('Error al crear el usuario', 'error')
+                
         except ValueError as e:
             flash(str(e), 'error')
         except Exception as e:
             flash(f'Error inesperado: {str(e)}', 'error')
+            print(f"❌ Error: {e}")
+    
     return render_template('registro.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    """Inicio de sesión - CON FLASK-LOGIN"""
     if request.method == 'POST':
         email = request.form.get('email', '').strip()
         password = request.form.get('password', '').strip()
@@ -264,24 +289,44 @@ def login():
             return render_template('login.html')
         
         usuario_data = db.obtener_usuario_por_email(email)
-        if usuario_data and usuario_data[3] == f"enc_{password}_2026":
-            session['usuario_id'] = usuario_data[0]
-            session['usuario_nombre'] = usuario_data[1]
-            session['usuario_email'] = usuario_data[2]
-            flash(f'¡Bienvenido {usuario_data[1]}!', 'success')
-            return redirect(url_for('inicio'))
+        
+        if usuario_data:
+            # Crear objeto usuario
+            usuario = Usuario(
+                id=usuario_data[0],
+                nombre=usuario_data[1],
+                email=usuario_data[2],
+                password=usuario_data[3],
+                fecha_nacimiento=usuario_data[4]
+            )
+            
+            # Extraer la contraseña original para verificar
+            password_original = usuario_data[3].replace('enc_', '').replace('_2026', '')
+            if usuario.verificar_password(password_original if password_original else password):
+                # 🔥 Iniciar sesión con Flask-Login
+                login_user(usuario)
+                flash(f'¡Bienvenido {usuario.nombre}!', 'success')
+                
+                # Redirigir a la página que intentaba acceder
+                next_page = request.args.get('next')
+                return redirect(next_page) if next_page else redirect(url_for('inicio'))
+        
         flash('Email o contraseña incorrectos', 'error')
+    
     return render_template('login.html')
 
 @app.route('/logout')
 def logout():
-    session.clear()
+    """Cerrar sesión - CON FLASK-LOGIN"""
+    logout_user()
     flash('Sesión cerrada correctamente', 'success')
     return redirect(url_for('inicio'))
 
-# ----- RUTAS DEL CARRITO (Semana 11) -----
+# ----- RUTAS DEL CARRITO (Semana 11) - PROTEGIDAS -----
 @app.route('/agregar_al_carrito/<int:producto_id>')
+@login_required
 def agregar_al_carrito(producto_id):
+    """Agrega un producto al carrito - SOLO USUARIOS AUTENTICADOS"""
     producto = inventario.obtener_producto_por_id(producto_id)
     
     if not producto:
@@ -306,12 +351,8 @@ def agregar_al_carrito(producto_id):
             'subtotal': producto.precio
         }
     
-    total = 0
-    cantidad_total = 0
-    for item in carrito['items'].values():
-        total += item['subtotal']
-        cantidad_total += item['cantidad']
-    
+    total = sum(item['subtotal'] for item in carrito['items'].values())
+    cantidad_total = sum(item['cantidad'] for item in carrito['items'].values())
     carrito['total'] = total
     carrito['cantidad_items'] = cantidad_total
     
@@ -322,13 +363,17 @@ def agregar_al_carrito(producto_id):
     return redirect(url_for('ver_carrito'))
 
 @app.route('/carrito')
+@login_required
 def ver_carrito():
+    """Ver el contenido del carrito - SOLO USUARIOS AUTENTICADOS"""
     if 'carrito' not in session:
         session['carrito'] = {'items': {}, 'total': 0, 'cantidad_items': 0}
     return render_template('carrito.html', carrito=session['carrito'])
 
 @app.route('/actualizar_carrito/<int:producto_id>', methods=['POST'])
+@login_required
 def actualizar_carrito(producto_id):
+    """Actualizar cantidad de un producto - SOLO USUARIOS AUTENTICADOS"""
     cantidad = int(request.form.get('cantidad', 0))
     
     if 'carrito' in session:
@@ -343,12 +388,8 @@ def actualizar_carrito(producto_id):
                 carrito['items'][pid]['cantidad'] = cantidad
                 carrito['items'][pid]['subtotal'] = cantidad * carrito['items'][pid]['precio']
             
-            total = 0
-            cantidad_total = 0
-            for item in carrito['items'].values():
-                total += item['subtotal']
-                cantidad_total += item['cantidad']
-            
+            total = sum(item['subtotal'] for item in carrito['items'].values())
+            cantidad_total = sum(item['cantidad'] for item in carrito['items'].values())
             carrito['total'] = total
             carrito['cantidad_items'] = cantidad_total
             session['carrito'] = carrito
@@ -357,7 +398,9 @@ def actualizar_carrito(producto_id):
     return redirect(url_for('ver_carrito'))
 
 @app.route('/eliminar_del_carrito/<int:producto_id>')
+@login_required
 def eliminar_del_carrito(producto_id):
+    """Eliminar un producto del carrito - SOLO USUARIOS AUTENTICADOS"""
     if 'carrito' in session:
         carrito = session['carrito']
         pid = str(producto_id)
@@ -365,12 +408,8 @@ def eliminar_del_carrito(producto_id):
         if pid in carrito['items']:
             del carrito['items'][pid]
             
-            total = 0
-            cantidad_total = 0
-            for item in carrito['items'].values():
-                total += item['subtotal']
-                cantidad_total += item['cantidad']
-            
+            total = sum(item['subtotal'] for item in carrito['items'].values())
+            cantidad_total = sum(item['cantidad'] for item in carrito['items'].values())
             carrito['total'] = total
             carrito['cantidad_items'] = cantidad_total
             session['carrito'] = carrito
@@ -380,20 +419,22 @@ def eliminar_del_carrito(producto_id):
     return redirect(url_for('ver_carrito'))
 
 @app.route('/finalizar_compra')
+@login_required
 def finalizar_compra():
-    if 'usuario_id' not in session:
-        flash('Debes iniciar sesión', 'error')
-        return redirect(url_for('login'))
+    """Finalizar la compra - SOLO USUARIOS AUTENTICADOS"""
     if 'carrito' not in session or not session['carrito'].get('items'):
         flash('Tu carrito está vacío', 'error')
         return redirect(url_for('ver_carrito'))
+    
     flash('¡Compra realizada con éxito!', 'success')
     session.pop('carrito', None)
     return redirect(url_for('inicio'))
 
 # ----- RUTAS PARA ARCHIVOS (Semana 12) -----
 @app.route('/datos')
+@login_required
 def ver_datos():
+    """Vista principal de gestión de archivos - SOLO USUARIOS AUTENTICADOS"""
     datos_txt = cargar_desde_txt()
     datos_json = cargar_desde_json()
     datos_csv = cargar_desde_csv()
@@ -403,7 +444,9 @@ def ver_datos():
                          datos_csv=datos_csv)
 
 @app.route('/datos/agregar', methods=['POST'])
+@login_required
 def agregar_producto_data():
+    """Agrega un producto a archivos - SOLO USUARIOS AUTENTICADOS"""
     try:
         nombre = request.form.get('nombre')
         precio = float(request.form.get('precio'))
@@ -428,21 +471,25 @@ def agregar_producto_data():
     return redirect(url_for('ver_datos'))
 
 @app.route('/datos/cargar/txt')
+@login_required
 def cargar_txt():
     productos = cargar_desde_txt()
     return render_template('datos_tabla.html', productos=productos, formato='TXT')
 
 @app.route('/datos/cargar/json')
+@login_required
 def cargar_json():
     productos = cargar_desde_json()
     return render_template('datos_tabla.html', productos=productos, formato='JSON')
 
 @app.route('/datos/cargar/csv')
+@login_required
 def cargar_csv():
     productos = cargar_desde_csv()
     return render_template('datos_tabla.html', productos=productos, formato='CSV')
 
 @app.route('/datos/exportar/txt')
+@login_required
 def exportar_txt():
     try:
         productos = inventario.obtener_todos()
@@ -456,6 +503,7 @@ def exportar_txt():
     return redirect(url_for('ver_datos'))
 
 @app.route('/datos/exportar/json')
+@login_required
 def exportar_json():
     try:
         productos = inventario.obtener_todos()
@@ -468,6 +516,7 @@ def exportar_json():
     return redirect(url_for('ver_datos'))
 
 @app.route('/datos/exportar/csv')
+@login_required
 def exportar_csv():
     try:
         productos = inventario.obtener_todos()
@@ -483,7 +532,9 @@ def exportar_csv():
 
 # ----- RUTAS PARA MYSQL (Semana 13) -----
 @app.route('/mysql')
+@login_required
 def ver_mysql():
+    """Muestra productos desde MySQL - SOLO USUARIOS AUTENTICADOS"""
     conn = conectar_mysql()
     if conn:
         try:
@@ -499,7 +550,9 @@ def ver_mysql():
     return redirect(url_for('inicio'))
 
 @app.route('/mysql/insertar', methods=['GET', 'POST'])
+@login_required
 def insertar_mysql():
+    """Formulario para insertar producto en MySQL - SOLO USUARIOS AUTENTICADOS"""
     if request.method == 'POST':
         try:
             nombre = request.form.get('nombre')
@@ -523,6 +576,7 @@ def insertar_mysql():
     return render_template('mysql_form.html')
 
 @app.route('/mysql/actualizar/<int:id>', methods=['POST'])
+@login_required
 def actualizar_mysql(id):
     try:
         precio = float(request.form.get('precio'))
@@ -541,6 +595,7 @@ def actualizar_mysql(id):
     return redirect(url_for('ver_mysql'))
 
 @app.route('/mysql/eliminar/<int:id>')
+@login_required
 def eliminar_mysql(id):
     try:
         conn = conectar_mysql()
@@ -562,8 +617,8 @@ def test_db():
     """Ruta para verificar qué base de datos se está usando"""
     try:
         from database.conexion import MySQLConnection
-        db = MySQLConnection()
-        conn = db.conectar()
+        db_mysql = MySQLConnection()
+        conn = db_mysql.conectar()
         
         if conn:
             with conn.cursor() as cursor:
