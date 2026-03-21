@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | Tienda Tech{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="bi bi-person-circle"></i> ¡Bienvenido <strong>{{ current_user.nombre }}</strong>! Has iniciado sesión correctamente.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TARJETAS DE ACCESO RÁPIDO -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-primary">
+                <div class="card-body text-center">
+                    <div class="display-1 mb-3">📦</div>
+                    <h5 class="card-title">Control de Inventarios</h5>
+                    <p class="card-text text-muted">Gestiona productos, precios y stock</p>
+                    <a href="{{ url_for('ver_mysql') }}" class="btn btn-outline-primary">Acceder</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-success">
+                <div class="card-body text-center">
+                    <div class="display-1 mb-3">🛒</div>
+                    <h5 class="card-title">Carrito de Compras</h5>
+                    <p class="card-text text-muted">Administra tus compras</p>
+                    <a href="{{ url_for('ver_carrito') }}" class="btn btn-outline-success">Acceder</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-info">
+                <div class="card-body text-center">
+                    <div class="display-1 mb-3">📁</div>
+                    <h5 class="card-title">Archivos Locales</h5>
+                    <p class="card-text text-muted">Exporta datos a TXT, JSON, CSV</p>
+                    <a href="{{ url_for('ver_datos') }}" class="btn btn-outline-info">Acceder</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ESTADÍSTICAS RÁPIDAS -->
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">📦 Productos en Inventario</h5>
+                </div>
+                <div class="card-body">
+                    <p class="display-4 text-center">{{ total_productos }}</p>
+                    <p class="text-center text-muted">Productos registrados</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">👥 Usuarios Registrados</h5>
+                </div>
+                <div class="card-body">
+                    <p class="display-4 text-center">{{ total_usuarios }}</p>
+                    <p class="text-center text-muted">Usuarios en el sistema</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -76,4 +76,4 @@ python app.py
 http://127.0.0.1:5000
 
 👨‍💻 AUTOR
-Luis Samaniego - Proyecto Semanas 9-12
+Luis Samaniego - Proyecto Semanas 09-14

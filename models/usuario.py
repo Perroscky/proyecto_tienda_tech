@@ -1,15 +1,16 @@
 # models/usuario.py
 """
-Modelo de Usuario con Flask-Login
-TODAS las funcionalidades anteriores se mantienen
+Modelo de Usuario con Flask-Login y Werkzeug
+Compatibilidad con contraseñas antiguas y nuevas
 """
 
 from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
 import re
 from datetime import datetime, date
 
 class Usuario(UserMixin):
-    """Clase que representa un usuario de la tienda - AHORA CON FLASK-LOGIN"""
+    """Clase que representa un usuario de la tienda"""
     
     usuarios_registrados = set()
     
@@ -25,7 +26,13 @@ class Usuario(UserMixin):
         self.id = id
         self.nombre = nombre
         self.email = email
-        self.password = f"enc_{password}_2026" if not password.startswith('enc_') else password
+        
+        # 🔥 NUEVO: Cifrado con Werkzeug, pero manteniendo compatibilidad
+        if password and not password.startswith('enc_') and not password.startswith('pbkdf2:'):
+            self.password = generate_password_hash(password)
+        else:
+            self.password = password
+        
         self.fecha_nacimiento = fecha_nacimiento
         self.proveedor = proveedor
         self.fecha_registro = datetime.now()
@@ -47,8 +54,20 @@ class Usuario(UserMixin):
         return edad >= 18
     
     def verificar_password(self, password):
-        """Verifica si la contraseña es correcta"""
-        return self.password == f"enc_{password}_2026"
+        """
+        Verifica la contraseña con compatibilidad hacia atrás
+        - Si es formato antiguo (enc_xxx_2026) → verifica directamente
+        - Si es formato nuevo (pbkdf2:) → usa Werkzeug
+        """
+        # Formato antiguo (usuarios existentes)
+        if self.password.startswith('enc_') and self.password == f"enc_{password}_2026":
+            return True
+        
+        # Formato nuevo con Werkzeug
+        try:
+            return check_password_hash(self.password, password)
+        except:
+            return False
     
     @staticmethod
     def validar_email(email):

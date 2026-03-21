@@ -4,48 +4,54 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Tienda Tech Online{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Tu CSS personalizado -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    
+    {% block extra_styles %}{% endblock %}
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>🖥️ Tienda Tech Online</h1>
-            <p class="subtitle">Los mejores productos de tecnología al mejor precio</p>
-        </header>
-        
-        <nav class="navbar">
-            <a href="{{ url_for('inicio') }}">Inicio</a>
-            <a href="{{ url_for('categoria', tipo='computadoras') }}">Computadoras</a>
-            <a href="{{ url_for('categoria', tipo='perifericos') }}">Periféricos</a>
-            <a href="{{ url_for('categoria', tipo='audio') }}">Audio</a>
-            <a href="{{ url_for('contacto') }}">Contacto</a>
-            <a href="{{ url_for('about') }}">Acerca de</a>
-            
-            <!-- Menú para usuarios autenticados -->
-            {% if current_user.is_authenticated %}
-                <a href="{{ url_for('ver_datos') }}">📊 Datos</a>
-                <a href="{{ url_for('ver_mysql') }}">🗄️ MySQL</a>
-                <a href="{{ url_for('logout') }}">🚪 Cerrar Sesión ({{ current_user.nombre }})</a>
-            {% else %}
-                <a href="{{ url_for('login') }}">🔐 Iniciar Sesión</a>
-                <a href="{{ url_for('registro') }}">📝 Registrarse</a>
-            {% endif %}
-            
-            <a href="{{ url_for('ver_carrito') }}">🛒 Carrito 
-                {% if session.carrito and session.carrito.cantidad_items %}
-                    ({{ session.carrito.cantidad_items }})
-                {% endif %}
-            </a>
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark rounded-top">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="{{ url_for('inicio') }}">🖥️ Tienda Tech Online</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav me-auto">
+                        {% if current_user.is_authenticated %}
+                            <li class="nav-item"><a class="nav-link" href="{{ url_for('ver_mysql') }}">📦 Productos</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{{ url_for('ver_carrito') }}">🛒 Carrito</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{{ url_for('ver_datos') }}">📊 Datos</a></li>
+                        {% endif %}
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('contacto') }}">Contacto</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('about') }}">Acerca de</a></li>
+                    </ul>
+                    
+                    <ul class="navbar-nav ms-auto">
+                        {% if current_user.is_authenticated %}
+                            <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}">🚪 Cerrar Sesión ({{ current_user.nombre }})</a></li>
+                        {% else %}
+                            <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">🔐 Iniciar Sesión</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{{ url_for('registro') }}">📝 Registrarse</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
         </nav>
         
-        <main>
+        <main class="py-4">
+            <!-- Mensajes flash con Bootstrap -->
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     {% for category, message in messages %}
-                        <div style="padding: 10px; margin: 10px 0; border-radius: 5px; 
-                                  background-color: {% if category == 'error' %}#f8d7da{% else %}#d4edda{% endif %}; 
-                                  color: {% if category == 'error' %}#721c24{% else %}#155724{% endif %};">
+                        <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
                             {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         </div>
                     {% endfor %}
                 {% endif %}
@@ -54,10 +60,13 @@
             {% block content %}{% endblock %}
         </main>
         
-        <footer>
+        <footer class="bg-dark text-white text-center py-3 rounded-bottom">
             <p>&copy; 2026 Tienda Tech Online. Todos los derechos reservados.</p>
-            <p>Santo Domingo, Ecuador | <a href="{{ url_for('contacto') }}">Contáctanos</a></p>
+            <p>Santo Domingo, Ecuador | <a href="{{ url_for('contacto') }}" class="text-white">Contáctanos</a></p>
         </footer>
     </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

@@ -1,46 +1,44 @@
 {% extends "base.html" %}
 
-{% block title %}Inicio | Tienda Tech Online{% endblock %}
+{% block title %}Tienda Tech Online | Bienvenido{% endblock %}
 
 {% block content %}
-<section class="welcome">
-    <h2>🎯 Catálogo de Productos</h2>
-    <p>Descubre nuestra selección de tecnología premium</p>
-</section>
-
-<section class="productos">
-    <div class="producto-grid">
-        {% for key, prod in productos.items() %}
-        <div class="producto-card">
-            <div class="producto-icon">
-                {% if 'laptop' in key %}🖥️
-                {% elif 'mouse' in key %}🖱️
-                {% elif 'teclado' in key %}⌨️
-                {% elif 'monitor' in key %}🖥️
-                {% elif 'audifonos' in key %}🎧
-                {% elif 'webcam' in key %}📹
-                {% else %}📦
-                {% endif %}
+<div class="container py-5">
+    <div class="row justify-content-center text-center">
+        <div class="col-md-8">
+            <!-- TÍTULO PRINCIPAL -->
+            <div class="mb-4">
+                <h1 class="display-3 fw-bold text-primary">🖥️ Tienda Tech Online</h1>
+                <p class="lead text-muted">Sistema de gestión de inventario para productos tecnológicos</p>
             </div>
-            <h3>{{ prod['nombre'] }}</h3>
-            <p class="precio">{{ prod['precio'] }}</p>
-            <p class="stock">{{ prod['stock'] }}</p>
-            <div style="display: flex; gap: 5px; justify-content: center;">
-                <a href="{{ url_for('producto', nombre=key) }}" class="btn-ver">Ver Detalles</a>
-                <a href="{{ url_for('agregar_al_carrito', producto_id=prod.id) }}" class="btn-ver" style="background: #27ae60;">🛒 Agregar</a>
+            
+            <!-- DESCRIPCIÓN DEL SISTEMA -->
+            <div class="card shadow-sm mb-5">
+                <div class="card-body p-4">
+                    <h5 class="card-title text-secondary">📋 Accede al sistema</h5>
+                    <p class="text-muted">Para utilizar todas las funcionalidades de gestión de inventario, carrito de compras y administración de productos, necesitas iniciar sesión o registrarte.</p>
+                </div>
+            </div>
+            
+            <!-- BOTONES DE ACCESO -->
+            <div class="row g-3 justify-content-center">
+                <div class="col-sm-6">
+                    <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg w-100 py-3">
+                        🔐 Iniciar Sesión
+                    </a>
+                </div>
+                <div class="col-sm-6">
+                    <a href="{{ url_for('registro') }}" class="btn btn-outline-secondary btn-lg w-100 py-3">
+                        📝 Registrarse
+                    </a>
+                </div>
+            </div>
+            
+            <!-- INFORMACIÓN ADICIONAL -->
+            <div class="mt-5 text-muted small">
+                <p>¿Eres administrador? Contacta al soporte para obtener acceso especial.</p>
             </div>
         </div>
-        {% endfor %}
     </div>
-</section>
-
-<section class="promociones">
-    <h2>🔥 Ofertas Especiales</h2>
-    <p>Aprovecha nuestras promociones exclusivas</p>
-    <div class="promo-banner">
-        <p>✨ Envío gratis en compras mayores a $100</p>
-        <p>💳 12 meses sin intereses</p>
-        <p>🎁 Garantía extendida disponible</p>
-    </div>
-</section>
+</div>
 {% endblock %}
