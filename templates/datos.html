@@ -23,7 +23,6 @@
     <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
         <h2 style="color: #764ba2; margin-bottom: 20px;">➕ Agregar Nuevo Producto</h2>
         <form method="POST" action="{{ url_for('agregar_producto_data') }}">
-            <!-- Eliminada la línea problemática de form.hidden_tag() -->
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                 <div>
                     <label style="display: block; margin-bottom: 5px;">Nombre:</label>
@@ -39,7 +38,15 @@
                 </div>
                 <div>
                     <label style="display: block; margin-bottom: 5px;">Categoría:</label>
-                    <input type="text" name="categoria" required style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                    <select name="categoria" required style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                        <option value="">Selecciona una categoría</option>
+                        <option value="computadoras">💻 Computadoras</option>
+                        <option value="perifericos">🖱️ Periféricos</option>
+                        <option value="audio">🎧 Audio</option>
+                        <option value="celulares">📱 Celulares</option>
+                        <option value="tablets">📲 Tablets</option>
+                        <option value="otros">📦 Otros</option>
+                    </select>
                 </div>
                 <div style="grid-column: span 2;">
                     <label style="display: block; margin-bottom: 5px;">Descripción:</label>
@@ -50,14 +57,14 @@
         </form>
     </div>
     
-    <!-- Botones para cargar datos - AHORA 3 COLUMNAS -->
+    <!-- Botones para cargar datos -->
     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 30px;">
         <a href="{{ url_for('cargar_txt') }}" style="display: block; padding: 15px; background: #3498db; color: white; text-align: center; text-decoration: none; border-radius: 5px;">📄 Ver TXT</a>
         <a href="{{ url_for('cargar_json') }}" style="display: block; padding: 15px; background: #f39c12; color: white; text-align: center; text-decoration: none; border-radius: 5px;">📋 Ver JSON</a>
         <a href="{{ url_for('cargar_csv') }}" style="display: block; padding: 15px; background: #2ecc71; color: white; text-align: center; text-decoration: none; border-radius: 5px;">📊 Ver CSV</a>
     </div>
     
-    <!-- Visualización de datos - SIN SECCIÓN SQLITE -->
+    <!-- Visualización de datos -->
     <div style="margin-top: 30px;">
         <h2 style="color: #764ba2; margin-bottom: 20px;">📋 Productos Guardados</h2>
         
@@ -73,7 +80,7 @@
                         <th style="padding: 10px;">Precio</th>
                         <th style="padding: 10px;">Cantidad</th>
                         <th style="padding: 10px;">Categoría</th>
-                    </tr>
+                     </tr>
                 </thead>
                 <tbody>
                     {% for producto in datos_txt %}
@@ -83,10 +90,10 @@
                         <td style="padding: 10px;">${{ "%.2f"|format(producto.precio) }}</td>
                         <td style="padding: 10px;">{{ producto.cantidad }}</td>
                         <td style="padding: 10px;">{{ producto.categoria }}</td>
-                    </tr>
+                     </tr>
                     {% endfor %}
                 </tbody>
-            </table>
+             </table>
             {% else %}
             <p style="color: #666;">No hay datos TXT disponibles</p>
             {% endif %}
@@ -104,7 +111,7 @@
                         <th style="padding: 10px;">Precio</th>
                         <th style="padding: 10px;">Cantidad</th>
                         <th style="padding: 10px;">Categoría</th>
-                    </tr>
+                     </tr>
                 </thead>
                 <tbody>
                     {% for producto in datos_json %}
@@ -114,10 +121,10 @@
                         <td style="padding: 10px;">${{ "%.2f"|format(producto.precio) }}</td>
                         <td style="padding: 10px;">{{ producto.cantidad }}</td>
                         <td style="padding: 10px;">{{ producto.categoria }}</td>
-                    </tr>
+                     </tr>
                     {% endfor %}
                 </tbody>
-            </table>
+             </table>
             {% else %}
             <p style="color: #666;">No hay datos JSON disponibles</p>
             {% endif %}
@@ -135,7 +142,7 @@
                         <th style="padding: 10px;">Precio</th>
                         <th style="padding: 10px;">Cantidad</th>
                         <th style="padding: 10px;">Categoría</th>
-                    </tr>
+                     </tr>
                 </thead>
                 <tbody>
                     {% for producto in datos_csv %}
@@ -145,17 +152,17 @@
                         <td style="padding: 10px;">${{ "%.2f"|format(producto.precio) }}</td>
                         <td style="padding: 10px;">{{ producto.cantidad }}</td>
                         <td style="padding: 10px;">{{ producto.categoria }}</td>
-                    </tr>
+                     </tr>
                     {% endfor %}
                 </tbody>
-            </table>
+             </table>
             {% else %}
             <p style="color: #666;">No hay datos CSV disponibles</p>
             {% endif %}
         </div>
     </div>
     
-    <!-- Botones para exportar datos - AHORA 3 COLUMNAS -->
+    <!-- Botones para exportar datos -->
     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 30px;">
         <a href="{{ url_for('exportar_txt') }}" style="display: block; padding: 15px; background: #3498db; color: white; text-align: center; text-decoration: none; border-radius: 5px;">📥 Exportar TXT</a>
         <a href="{{ url_for('exportar_json') }}" style="display: block; padding: 15px; background: #f39c12; color: white; text-align: center; text-decoration: none; border-radius: 5px;">📥 Exportar JSON</a>

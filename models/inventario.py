@@ -1,7 +1,10 @@
 # models/inventario.py
+"""
+Clase Inventario - Gestiona el inventario de productos
+"""
 
 from models.producto import Producto
-from database.db_manager import DatabaseManager # type: ignore
+from database.db_manager import DatabaseManager
 import sqlite3
 
 class Inventario:
@@ -10,15 +13,15 @@ class Inventario:
     usando un diccionario en memoria y sincroniza con SQLite
     """
     
-    # Constantes para categorías válidas de tu tienda tech (ejemplo de TUPLA)
-    CATEGORIAS_VALIDAS = ('computadoras', 'perifericos', 'audio', 'otros')
+    # 🔥 CATEGORÍAS ACTUALIZADAS - Incluye Celulares y Tablets
+    CATEGORIAS_VALIDAS = ('computadoras', 'perifericos', 'audio', 'celulares', 'tablets', 'otros')
     
     def __init__(self):
         """
         Inicializa el inventario con un diccionario vacío y conecta a la BD
         """
         self.productos = {}  # Diccionario: clave=id, valor=objeto Producto
-        self.db = DatabaseManager("proyecto_tienda_tech.db")
+        self.db = DatabaseManager()
         self.cargar_desde_bd()
     
     def cargar_desde_bd(self):
@@ -48,7 +51,7 @@ class Inventario:
         """
         Agrega un nuevo producto al inventario (en memoria y BD)
         """
-        # Validar categoría con la tupla
+        # Validar categoría con la tupla actualizada
         if categoria not in self.CATEGORIAS_VALIDAS:
             raise ValueError(f"Categoría no válida. Debe ser una de: {self.CATEGORIAS_VALIDAS}")
         
@@ -93,6 +96,10 @@ class Inventario:
         """
         if id not in self.productos:
             return False
+        
+        # Validar categoría si se está actualizando
+        if 'categoria' in kwargs and kwargs['categoria'] not in self.CATEGORIAS_VALIDAS:
+            raise ValueError(f"Categoría no válida. Debe ser una de: {self.CATEGORIAS_VALIDAS}")
         
         producto = self.productos[id]
         
