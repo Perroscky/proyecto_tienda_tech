@@ -2,8 +2,6 @@
 
 Sistema de gestión de inventario para tienda de artículos tecnológicos desarrollado con Flask.
 
----
-
 ## 📋 DESCRIPCIÓN
 
 Aplicación web completa que permite:
@@ -13,8 +11,6 @@ Aplicación web completa que permite:
 - Agregar productos al carrito de compras
 - Gestionar inventario desde consola
 - Persistir datos en TXT, JSON, CSV y SQLite
-
----
 
 ## 🚀 FUNCIONALIDADES POR SEMANA
 
