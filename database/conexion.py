@@ -1,7 +1,6 @@
 # database/conexion.py
 """
 CONEXIÓN A MYSQL - Versión para Clever Cloud y Local
-Archivo COMPLETO - Solo copiar y pegar
 """
 
 import pymysql
@@ -11,7 +10,7 @@ import os
 class MySQLConnection:
     """
     Clase que maneja la conexión a MySQL.
-    - En LOCAL: usa WAMP (root/123456)
+    - En LOCAL: usa WAMP (root/contraseña vacía)
     - En RENDER: usa Clever Cloud (variables de entorno)
     """
     
@@ -40,12 +39,12 @@ class MySQLConnection:
                     raise ValueError(f"❌ Variable de entorno {key} no está definida en Render")
             
         else:
-            # 🔥 MODO DESARROLLO LOCAL - Usar WAMP
+            # 🔥 MODO DESARROLLO LOCAL - Usar WAMP (contraseña vacía)
             print("💻 Modo DESARROLLO LOCAL: Conectando a WAMP...")
             self.config = {
                 'host': 'localhost',
                 'user': 'root',
-                'password': '123456',
+                'password': '123456',  # 🔥
                 'database': 'proyecto_tienda_tech',
                 'port': 3306,
                 'charset': 'utf8mb4',

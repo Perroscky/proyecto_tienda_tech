@@ -24,9 +24,11 @@
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav me-auto">
                         {% if current_user.is_authenticated %}
-                            <li class="nav-item"><a class="nav-link" href="{{ url_for('ver_mysql') }}">📦 Productos</a></li>
+                            <!-- 🔥 NUEVO: Enlace a Productos (CRUD y Reportes) -->
+                            <li class="nav-item"><a class="nav-link" href="{{ url_for('listar_productos') }}">📦 Productos</a></li>
                             <li class="nav-item"><a class="nav-link" href="{{ url_for('ver_carrito') }}">🛒 Carrito</a></li>
                             <li class="nav-item"><a class="nav-link" href="{{ url_for('ver_datos') }}">📊 Datos</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{{ url_for('ver_mysql') }}">🗄️ MySQL</a></li>
                         {% endif %}
                         <li class="nav-item"><a class="nav-link" href="{{ url_for('contacto') }}">Contacto</a></li>
                         <li class="nav-item"><a class="nav-link" href="{{ url_for('about') }}">Acerca de</a></li>

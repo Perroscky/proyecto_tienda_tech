@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}Productos | Tienda Tech{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2">📦 Gestión de Productos</h1>
+        <div>
+            <a href="{{ url_for('producto_nuevo') }}" class="btn btn-success">
+                <i class="bi bi-plus-circle"></i> Nuevo Producto
+            </a>
+            <div class="btn-group ms-2">
+                <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
+                    📊 Reportes
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{{ url_for('generar_reporte_productos') }}">📄 Reporte General</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('generar_reporte_bajo_stock') }}">⚠️ Productos con Bajo Stock</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{{ url_for('generar_reporte_categoria', categoria='computadoras') }}">💻 Computadoras</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('generar_reporte_categoria', categoria='perifericos') }}">🖱️ Periféricos</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('generar_reporte_categoria', categoria='audio') }}">🎧 Audio</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('generar_reporte_categoria', categoria='celulares') }}">📱 Celulares</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('generar_reporte_categoria', categoria='tablets') }}">📲 Tablets</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('generar_reporte_categoria', categoria='otros') }}">📦 Otros</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Total Productos</h5>
+                    <p class="card-text display-6">{{ estadisticas.total }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Valor Inventario</h5>
+                    <p class="card-text display-6">${{ "%.2f"|format(estadisticas.valor_total) }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Productos por Categoría</h5>
+                    <div class="row">
+                        {% for cat, cant in estadisticas.productos_por_categoria.items() %}
+                        <div class="col-4">
+                            <span class="badge bg-light text-dark">{{ cat }}: {{ cant }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('filtrar_productos') }}" class="row g-3">
+                {{ form_filtro.hidden_tag() }}
+                <div class="col-md-4">
+                    {{ form_filtro.categoria.label(class="form-label") }}
+                    {{ form_filtro.categoria(class="form-select") }}
+                </div>
+                <div class="col-md-3">
+                    {{ form_filtro.stock_minimo.label(class="form-label") }}
+                    {{ form_filtro.stock_minimo(class="form-control", placeholder="Stock mínimo") }}
+                </div>
+                <div class="col-md-3">
+                    {{ form_filtro.buscar.label(class="form-label") }}
+                    {{ form_filtro.buscar(class="form-control", placeholder="Buscar producto...") }}
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-secondary w-100">🔍 Filtrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabla de productos -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Precio</th>
+                            <th>Cantidad</th>
+                            <th>Categoría</th>
+                            <th>Descripción</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in productos %}
+                        <tr>
+                            <td>{{ p.id }}</td>
+                            <td>{{ p.nombre }}</td>
+                            <td>${{ "%.2f"|format(p.precio) }}</td>
+                            <td class="{% if p.cantidad <= 5 %}text-danger fw-bold{% endif %}">
+                                {{ p.cantidad }}
+                                {% if p.cantidad <= 5 %}
+                                    <span class="badge bg-warning text-dark">⚠️</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ p.categoria }}</td>
+                            <td>{{ p.descripcion[:50] }}{% if p.descripcion|length > 50 %}...{% endif %}</td>
+                            <td>
+                                <a href="{{ url_for('producto_editar', id=p.id) }}" class="btn btn-sm btn-warning">
+                                    ✏️ Editar
+                                </a>
+                                <a href="{{ url_for('producto_eliminar', id=p.id) }}" class="btn btn-sm btn-danger" 
+                                   onclick="return confirm('¿Estás seguro de eliminar este producto?')">
+                                    🗑️ Eliminar
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center">No hay productos registrados</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

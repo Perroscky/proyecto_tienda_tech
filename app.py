@@ -1,10 +1,14 @@
-# app.py - VERSIÓN COMPLETA CON DASHBOARD Y REDIRECCIÓN
+# app.py - VERSIÓN COMPLETA CON SEMANA 15 (CRUD, REPORTES PDF, ESTRUCTURA POR CAPAS)
 
-from flask import Flask, render_template, request, redirect, url_for, session, flash
-from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from flask import send_file # type: ignore
+from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file # type: ignore
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user # type: ignore
 from models.inventario import Inventario
 from models.usuario import Usuario
 from database.db_manager import DatabaseManager
+from services.producto_service import ProductoService
+from services.reporte_service import ReporteService
+from forms.producto_form import ProductoForm, ProductoFiltroForm
 import os
 import json
 import csv
@@ -30,6 +34,8 @@ os.makedirs(DATA_FOLDER, exist_ok=True)
 # Inicializar componentes
 inventario = Inventario()
 db = DatabaseManager()
+producto_service = ProductoService()
+reporte_service = ReporteService()
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -47,7 +53,7 @@ def load_user(user_id):
         print(f"Error cargando usuario: {e}")
     return None
 
-# ----- FUNCIONES PARA ARCHIVOS -----
+# ----- FUNCIONES PARA ARCHIVOS (Semana 12) -----
 def guardar_en_txt(producto):
     try:
         with open(TXT_FILE, 'a', encoding='utf-8') as f:
@@ -133,7 +139,7 @@ def cargar_desde_csv():
         print(f"Error cargando CSV: {e}")
     return productos
 
-# ----- FUNCIONES PARA MYSQL -----
+# ----- FUNCIONES PARA MYSQL (Semana 13) -----
 def conectar_mysql():
     try:
         from database.conexion import MySQLConnection
@@ -147,31 +153,15 @@ def conectar_mysql():
         print(f"❌ Error conectando a MySQL: {e}")
         return None
 
-# ----- RUTAS PÚBLICAS -----
+# ----- RUTAS PÚBLICAS (Semanas 9-10) -----
 @app.route('/')
 def inicio():
-    """Página principal - Redirige según autenticación"""
     if current_user.is_authenticated:
-        # Si está autenticado, mostrar dashboard con estadísticas
         try:
-            # Obtener total de productos desde MySQL
-            conn = conectar_mysql()
-            total_productos = 0
-            if conn:
-                with conn.cursor() as cursor:
-                    cursor.execute("SELECT COUNT(*) as total FROM productos")
-                    result = cursor.fetchone()
-                    total_productos = result['total']
-                conn.close()
-            else:
-                # Fallback a SQLite
-                productos = inventario.obtener_todos()
-                total_productos = len(productos)
-            
-            # Obtener total de usuarios desde SQLite
+            productos = producto_service.obtener_todos()
+            total_productos = len(productos) if productos else 0
             usuarios_data = db.obtener_todos_usuarios()
             total_usuarios = len(usuarios_data) if usuarios_data else 0
-            
             return render_template('dashboard.html', 
                                  total_productos=total_productos,
                                  total_usuarios=total_usuarios)
@@ -179,7 +169,6 @@ def inicio():
             print(f"Error cargando dashboard: {e}")
             return render_template('dashboard.html', total_productos=0, total_usuarios=0)
     else:
-        # Si no está autenticado, mostrar página de bienvenida
         return render_template('index.html')
 
 @app.route('/producto/<nombre>')
@@ -221,7 +210,7 @@ def contacto():
 def about():
     return render_template('about.html')
 
-# ----- RUTAS DE AUTENTICACIÓN -----
+# ----- RUTAS DE AUTENTICACIÓN (Semana 11 y 14) -----
 @app.route('/registro', methods=['GET', 'POST'])
 def registro():
     if request.method == 'POST':
@@ -254,17 +243,19 @@ def registro():
                             cursor.execute("SHOW TABLES LIKE 'usuarios'")
                             if cursor.fetchone():
                                 sql = """INSERT INTO usuarios 
-                                         (id_usuario, nombre, mail, password, fecha_nacimiento, proveedor) 
-                                         VALUES (%s, %s, %s, %s, %s, %s)"""
+                                         (id_usuario, nombre, mail, password, fecha_nacimiento, proveedor, rol) 
+                                         VALUES (%s, %s, %s, %s, %s, %s, %s)"""
                                 cursor.execute(sql, (
                                     usuario_id,
                                     usuario.nombre,
                                     usuario.email,
                                     usuario.password,
                                     usuario.fecha_nacimiento,
-                                    usuario.proveedor
+                                    usuario.proveedor,
+                                    'admin'
                                 ))
                                 conn.commit()
+                                print("✅ Usuario guardado en MySQL")
                         conn.close()
                 except Exception as e:
                     print(f"⚠️ Error guardando en MySQL: {e}")
@@ -318,7 +309,7 @@ def logout():
     flash('Sesión cerrada correctamente', 'success')
     return redirect(url_for('inicio'))
 
-# ----- RUTAS DEL CARRITO -----
+# ----- RUTAS DEL CARRITO (Semana 11) -----
 @app.route('/agregar_al_carrito/<int:producto_id>')
 @login_required
 def agregar_al_carrito(producto_id):
@@ -421,7 +412,7 @@ def finalizar_compra():
     session.pop('carrito', None)
     return redirect(url_for('inicio'))
 
-# ----- RUTAS PARA ARCHIVOS -----
+# ----- RUTAS PARA ARCHIVOS (Semana 12) -----
 @app.route('/datos')
 @login_required
 def ver_datos():
@@ -519,7 +510,7 @@ def exportar_csv():
         flash(f'Error: {str(e)}', 'error')
     return redirect(url_for('ver_datos'))
 
-# ----- RUTAS PARA MYSQL -----
+# ----- RUTAS PARA MYSQL (Semana 13) -----
 @app.route('/mysql')
 @login_required
 def ver_mysql():
@@ -598,6 +589,151 @@ def eliminar_mysql(id):
         flash(f'Error: {str(e)}', 'error')
     return redirect(url_for('ver_mysql'))
 
+# =====================================================
+# NUEVAS RUTAS PARA CRUD Y REPORTES (Semana 15)
+# =====================================================
+
+@app.route('/productos')
+@login_required
+def listar_productos():
+    """Listar todos los productos con estadísticas"""
+    productos = producto_service.obtener_todos()
+    estadisticas = producto_service.obtener_estadisticas()
+    form_filtro = ProductoFiltroForm()
+    return render_template('productos_lista.html', 
+                         productos=productos, 
+                         estadisticas=estadisticas,
+                         form_filtro=form_filtro)
+
+@app.route('/productos/nuevo', methods=['GET', 'POST'])
+@login_required
+def producto_nuevo():
+    """Crear nuevo producto"""
+    form = ProductoForm()
+    
+    if form.validate_on_submit():
+        datos = {
+            'nombre': form.nombre.data,
+            'precio': form.precio.data,
+            'cantidad': form.cantidad.data,
+            'categoria': form.categoria.data,
+            'descripcion': form.descripcion.data
+        }
+        nuevo_id = producto_service.crear(datos)
+        if nuevo_id:
+            flash('Producto creado exitosamente', 'success')
+            return redirect(url_for('listar_productos'))
+        else:
+            flash('Error al crear el producto', 'error')
+    
+    return render_template('producto_form.html', form=form, titulo='Nuevo Producto')
+
+@app.route('/productos/editar/<int:id>', methods=['GET', 'POST'])
+@login_required
+def producto_editar(id):
+    """Editar producto existente"""
+    producto = producto_service.obtener_por_id(id)
+    if not producto:
+        flash('Producto no encontrado', 'error')
+        return redirect(url_for('listar_productos'))
+    
+    form = ProductoForm()
+    
+    if request.method == 'GET':
+        form.nombre.data = producto['nombre']
+        form.precio.data = producto['precio']
+        form.cantidad.data = producto['cantidad']
+        form.categoria.data = producto['categoria']
+        form.descripcion.data = producto.get('descripcion', '')
+    
+    if form.validate_on_submit():
+        datos = {
+            'nombre': form.nombre.data,
+            'precio': form.precio.data,
+            'cantidad': form.cantidad.data,
+            'categoria': form.categoria.data,
+            'descripcion': form.descripcion.data
+        }
+        if producto_service.actualizar(id, datos):
+            flash('Producto actualizado exitosamente', 'success')
+            return redirect(url_for('listar_productos'))
+        else:
+            flash('Error al actualizar el producto', 'error')
+    
+    return render_template('producto_form.html', form=form, titulo='Editar Producto', producto=producto)
+
+@app.route('/productos/eliminar/<int:id>')
+@login_required
+def producto_eliminar(id):
+    """Eliminar producto"""
+    if producto_service.eliminar(id):
+        flash('Producto eliminado exitosamente', 'success')
+    else:
+        flash('Error al eliminar el producto', 'error')
+    return redirect(url_for('listar_productos'))
+
+@app.route('/productos/reporte')
+@login_required
+def generar_reporte_productos():
+    """Generar reporte PDF de todos los productos"""
+    productos = producto_service.obtener_todos()
+    filename, filepath = reporte_service.generar_reporte_productos(productos)
+    flash(f'Reporte generado: {filename}', 'success')
+    return send_file(filepath, as_attachment=True, download_name=filename)
+
+@app.route('/productos/reporte/bajo-stock')
+@login_required
+def generar_reporte_bajo_stock():
+    """Generar reporte de productos con bajo stock"""
+    productos = producto_service.obtener_con_bajo_stock(5)
+    if not productos:
+        flash('No hay productos con bajo stock', 'info')
+        return redirect(url_for('listar_productos'))
+    filename, filepath = reporte_service.generar_reporte_bajo_stock(productos)
+    flash(f'Reporte generado: {filename}', 'success')
+    return send_file(filepath, as_attachment=True, download_name=filename)
+
+@app.route('/productos/reporte/categoria/<categoria>')
+@login_required
+def generar_reporte_categoria(categoria):
+    """Generar reporte por categoría"""
+    categorias_validas = ['computadoras', 'perifericos', 'audio', 'celulares', 'tablets', 'otros']
+    if categoria not in categorias_validas:
+        flash('Categoría no válida', 'error')
+        return redirect(url_for('listar_productos'))
+    
+    productos = producto_service.obtener_por_categoria(categoria)
+    if not productos:
+        flash(f'No hay productos en la categoría {categoria}', 'info')
+        return redirect(url_for('listar_productos'))
+    
+    filename, filepath = reporte_service.generar_reporte_por_categoria(productos, categoria)
+    flash(f'Reporte generado: {filename}', 'success')
+    return send_file(filepath, as_attachment=True, download_name=filename)
+
+@app.route('/productos/filtrar', methods=['POST'])
+@login_required
+def filtrar_productos():
+    """Filtrar productos"""
+    form = ProductoFiltroForm()
+    productos = producto_service.obtener_todos()
+    
+    if form.buscar.data:
+        productos = producto_service.buscar(form.buscar.data)
+    
+    if form.categoria.data:
+        productos = [p for p in productos if p['categoria'] == form.categoria.data]
+    
+    if form.stock_minimo.data and form.stock_minimo.data > 0:
+        productos = [p for p in productos if p['cantidad'] <= form.stock_minimo.data]
+    
+    estadisticas = producto_service.obtener_estadisticas()
+    
+    return render_template('productos_lista.html', 
+                         productos=productos, 
+                         estadisticas=estadisticas,
+                         form_filtro=form)
+
 # ----- RUTA DE PRUEBA -----
 @app.route('/test-db')
 def test_db():
@@ -638,5 +774,6 @@ if __name__ == '__main__':
     print("📱 Accede a: http://127.0.0.1:5000")
     print("📊 Semana 12: http://127.0.0.1:5000/datos")
     print("🗄️ Semana 13: http://127.0.0.1:5000/mysql")
+    print("📦 Semana 15: http://127.0.0.1:5000/productos")
     print("=" * 50)
     app.run(debug=True)

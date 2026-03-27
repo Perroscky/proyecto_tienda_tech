@@ -56,6 +56,19 @@ Aplicación web completa que permite:
 - Datos sincronizados: 8 productos y 5 usuarios en la nube
 - Rutas protegidas: `/datos`, `/mysql`, `/carrito` y todas las de gestión
 
+## **Semana 15 - CRUD completo, estructura por capas y reportes PDF
+- Implementación de estructura por capas con carpetas services/, forms/ y reports/
+- Desarrollo de CRUD completo para productos: Crear, Leer, Actualizar y Eliminar
+- Integración de formularios WTForms con validación de datos
+- Creación de servicios de negocio con ProductoService para manejar la lógica de productos
+- Generación de reportes en PDF con la librería ReportLab
+- Implementación de reporte general con listado completo de productos, totales y valor de inventario
+- Desarrollo de reporte de bajo stock para productos con stock ≤ 5 unidades
+- Creación de reportes por categoría (computadoras, periféricos, audio, celulares, tablets)
+- Adición de filtros avanzados por categoría, stock mínimo y búsqueda por nombre
+- Incorporación de indicadores visuales para productos con bajo stock
+- Nuevas rutas protegidas: /productos, /productos/nuevo, /productos/editar/<id>, /productos/eliminar/<id>, /productos/reporte
+
 ## 🚀 CÓMO EJECUTAR
 
 # 1. Crear entorno virtual
